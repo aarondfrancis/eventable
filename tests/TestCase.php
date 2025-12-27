@@ -3,10 +3,19 @@
 namespace AaronFrancis\Eventable\Tests;
 
 use AaronFrancis\Eventable\EventableServiceProvider;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 use Orchestra\Testbench\TestCase as Orchestra;
 
 abstract class TestCase extends Orchestra
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->setUpDatabase();
+    }
+
     protected function getPackageProviders($app): array
     {
         return [
@@ -23,8 +32,25 @@ abstract class TestCase extends Orchestra
         ]);
     }
 
-    protected function defineDatabaseMigrations(): void
+    protected function setUpDatabase(): void
     {
-        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
+        Schema::create('events', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedInteger('type');
+            $table->unsignedBigInteger('eventable_id');
+            $table->string('eventable_type');
+            $table->json('data')->nullable();
+            $table->timestamps();
+
+            $table->index(['eventable_id', 'eventable_type']);
+            $table->index(['eventable_type', 'type']);
+            $table->index(['type', 'created_at']);
+        });
+
+        Schema::create('test_models', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->timestamps();
+        });
     }
 }
