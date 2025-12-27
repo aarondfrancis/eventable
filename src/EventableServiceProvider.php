@@ -11,18 +11,18 @@ class EventableServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->mergeConfigFrom(__DIR__ . '/../config/eventable.php', 'eventable');
+        $this->mergeConfigFrom(__DIR__.'/../config/eventable.php', 'eventable');
     }
 
     public function boot(): void
     {
         if ($this->app->runningInConsole()) {
             $this->publishes([
-                __DIR__ . '/../config/eventable.php' => config_path('eventable.php'),
+                __DIR__.'/../config/eventable.php' => config_path('eventable.php'),
             ], 'eventable-config');
 
             $this->publishes([
-                __DIR__ . '/../database/migrations/create_events_table.php.stub' => $this->getMigrationFileName(),
+                __DIR__.'/../database/migrations/create_events_table.php.stub' => $this->getMigrationFileName(),
             ], 'eventable-migrations');
 
             $this->commands([
@@ -35,7 +35,7 @@ class EventableServiceProvider extends ServiceProvider
 
     protected function registerMorphMap(): void
     {
-        if (!config('eventable.register_morph_map', true)) {
+        if (! config('eventable.register_morph_map', true)) {
             return;
         }
 

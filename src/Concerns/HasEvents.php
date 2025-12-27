@@ -15,7 +15,7 @@ trait HasEvents
     {
         return $this->events()->create([
             'type' => $event->value,
-            'data' => $data
+            'data' => $data,
         ]);
     }
 

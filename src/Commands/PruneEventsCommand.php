@@ -17,13 +17,15 @@ class PruneEventsCommand extends Command
     {
         $enumClass = config('eventable.event_enum', null);
 
-        if (!$enumClass) {
+        if (! $enumClass) {
             $this->error('No event enum configured. Set eventable.event_enum in your config.');
+
             return self::FAILURE;
         }
 
-        if (!enum_exists($enumClass)) {
+        if (! enum_exists($enumClass)) {
             $this->error("The configured event enum [{$enumClass}] does not exist.");
+
             return self::FAILURE;
         }
 
@@ -33,7 +35,7 @@ class PruneEventsCommand extends Command
         $pruned = 0;
 
         foreach ($enumClass::cases() as $case) {
-            if (!$case instanceof PruneableEvent) {
+            if (! $case instanceof PruneableEvent) {
                 continue;
             }
 
@@ -78,17 +80,17 @@ class PruneEventsCommand extends Command
 
             if ($this->option('dry-run')) {
                 $count = $query->count();
-                $this->line("Event {$case->name}: " . number_format($count) . ' records to prune.');
+                $this->line("Event {$case->name}: ".number_format($count).' records to prune.');
                 $pruned += $count;
             } else {
                 $deleted = $query->delete();
-                $this->line("Event {$case->name}: " . number_format($deleted) . ' records pruned.');
+                $this->line("Event {$case->name}: ".number_format($deleted).' records pruned.');
                 $pruned += $deleted;
             }
         }
 
         $action = $this->option('dry-run') ? 'would be pruned' : 'pruned';
-        $this->info("Total: " . number_format($pruned) . " records {$action}.");
+        $this->info('Total: '.number_format($pruned)." records {$action}.");
 
         return self::SUCCESS;
     }

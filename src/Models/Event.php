@@ -10,7 +10,7 @@ use Illuminate\Support\Carbon;
 class Event extends Model
 {
     protected $casts = [
-        'data' => 'json'
+        'data' => 'json',
     ];
 
     protected $guarded = [];
@@ -42,8 +42,9 @@ class Event extends Model
             return;
         }
 
-        if (!is_array($data)) {
+        if (! is_array($data)) {
             $query->where('data', $data);
+
             return;
         }
 
