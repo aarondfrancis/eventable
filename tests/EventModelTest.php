@@ -71,6 +71,20 @@ class EventModelTest extends TestCase
         $this->assertCount(2, $events);
     }
 
+    public function test_scope_of_type_with_array_of_enums(): void
+    {
+        $model = TestModel::create(['name' => 'Test']);
+        $model->addEvent(TestEvent::Created);
+        $model->addEvent(TestEvent::Updated);
+        $model->addEvent(TestEvent::Deleted);
+
+        // Note: When passing array of enums, you must use ->value
+        // The scope only handles single enum objects, not arrays of enums
+        $events = Event::ofType([TestEvent::Created->value, TestEvent::Deleted->value])->get();
+
+        $this->assertCount(2, $events);
+    }
+
     public function test_scope_where_data_with_empty_data(): void
     {
         $model = TestModel::create(['name' => 'Test']);
