@@ -14,9 +14,20 @@ class StringEnumTest extends TestCase
     {
         parent::setUp();
 
-        // Modify the events table to use string type for string-backed enums
-        Schema::table('events', function (Blueprint $table) {
-            $table->string('type')->change();
+        // Drop and recreate the events table with string type for string-backed enums
+        // This avoids needing doctrine/dbal for column changes in Laravel 10
+        Schema::dropIfExists('events');
+        Schema::create('events', function (Blueprint $table) {
+            $table->id();
+            $table->string('type');
+            $table->unsignedBigInteger('eventable_id');
+            $table->string('eventable_type');
+            $table->json('data')->nullable();
+            $table->timestamps();
+
+            $table->index(['eventable_id', 'eventable_type']);
+            $table->index(['eventable_type', 'type']);
+            $table->index(['type', 'created_at']);
         });
     }
 
