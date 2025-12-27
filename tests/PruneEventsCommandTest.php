@@ -10,6 +10,12 @@ use Illuminate\Support\Carbon;
 
 class PruneEventsCommandTest extends TestCase
 {
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
+    }
+
     public function test_fails_without_enum_configured(): void
     {
         config(['eventable.event_enum' => null]);
@@ -46,24 +52,25 @@ class PruneEventsCommandTest extends TestCase
         config(['eventable.event_enum' => PruneableTestEvent::class]);
 
         $model = TestModel::create(['name' => 'Test']);
+        $now = Carbon::now();
 
-        // Create old event (should be pruned)
-        Carbon::setTestNow(Carbon::now()->subDays(45));
+        // Create old event (should be pruned) - 45 days ago
+        Carbon::setTestNow($now->copy()->subDays(45));
         Event::create([
             'type' => PruneableTestEvent::PruneOlderThan30Days->value,
             'eventable_id' => $model->id,
             'eventable_type' => TestModel::class,
         ]);
 
-        // Create recent event (should be kept)
-        Carbon::setTestNow(Carbon::now()->subDays(15));
+        // Create recent event (should be kept) - 15 days ago
+        Carbon::setTestNow($now->copy()->subDays(15));
         Event::create([
             'type' => PruneableTestEvent::PruneOlderThan30Days->value,
             'eventable_id' => $model->id,
             'eventable_type' => TestModel::class,
         ]);
 
-        Carbon::setTestNow();
+        Carbon::setTestNow($now);
 
         $this->artisan('eventable:prune')
             ->assertExitCode(0);
@@ -76,10 +83,11 @@ class PruneEventsCommandTest extends TestCase
         config(['eventable.event_enum' => PruneableTestEvent::class]);
 
         $model = TestModel::create(['name' => 'Test']);
+        $now = Carbon::now();
 
         // Create 10 events
         for ($i = 0; $i < 10; $i++) {
-            Carbon::setTestNow(Carbon::now()->subDays(10 - $i));
+            Carbon::setTestNow($now->copy()->subDays(10 - $i));
             Event::create([
                 'type' => PruneableTestEvent::KeepLast5->value,
                 'eventable_id' => $model->id,
@@ -87,7 +95,7 @@ class PruneEventsCommandTest extends TestCase
             ]);
         }
 
-        Carbon::setTestNow();
+        Carbon::setTestNow($now);
 
         $this->artisan('eventable:prune')
             ->assertExitCode(0);
@@ -101,10 +109,11 @@ class PruneEventsCommandTest extends TestCase
 
         $model1 = TestModel::create(['name' => 'Model 1']);
         $model2 = TestModel::create(['name' => 'Model 2']);
+        $now = Carbon::now();
 
         // Create 8 events for model1 and 4 for model2
         for ($i = 0; $i < 8; $i++) {
-            Carbon::setTestNow(Carbon::now()->subDays(10 - $i));
+            Carbon::setTestNow($now->copy()->subDays(10 - $i));
             Event::create([
                 'type' => PruneableTestEvent::KeepLast5->value,
                 'eventable_id' => $model1->id,
@@ -113,7 +122,7 @@ class PruneEventsCommandTest extends TestCase
         }
 
         for ($i = 0; $i < 4; $i++) {
-            Carbon::setTestNow(Carbon::now()->subDays(10 - $i));
+            Carbon::setTestNow($now->copy()->subDays(10 - $i));
             Event::create([
                 'type' => PruneableTestEvent::KeepLast5->value,
                 'eventable_id' => $model2->id,
@@ -121,7 +130,7 @@ class PruneEventsCommandTest extends TestCase
             ]);
         }
 
-        Carbon::setTestNow();
+        Carbon::setTestNow($now);
 
         $this->artisan('eventable:prune')
             ->assertExitCode(0);
@@ -136,10 +145,11 @@ class PruneEventsCommandTest extends TestCase
         config(['eventable.event_enum' => PruneableTestEvent::class]);
 
         $model = TestModel::create(['name' => 'Test']);
+        $now = Carbon::now();
 
         // Create 5 events with data A
         for ($i = 0; $i < 5; $i++) {
-            Carbon::setTestNow(Carbon::now()->subDays(10 - $i));
+            Carbon::setTestNow($now->copy()->subDays(10 - $i));
             Event::create([
                 'type' => PruneableTestEvent::KeepLast3VaryOnData->value,
                 'eventable_id' => $model->id,
@@ -150,7 +160,7 @@ class PruneEventsCommandTest extends TestCase
 
         // Create 5 events with data B
         for ($i = 0; $i < 5; $i++) {
-            Carbon::setTestNow(Carbon::now()->subDays(10 - $i));
+            Carbon::setTestNow($now->copy()->subDays(10 - $i));
             Event::create([
                 'type' => PruneableTestEvent::KeepLast3VaryOnData->value,
                 'eventable_id' => $model->id,
@@ -159,7 +169,7 @@ class PruneEventsCommandTest extends TestCase
             ]);
         }
 
-        Carbon::setTestNow();
+        Carbon::setTestNow($now);
 
         $this->artisan('eventable:prune')
             ->assertExitCode(0);
@@ -173,14 +183,15 @@ class PruneEventsCommandTest extends TestCase
         config(['eventable.event_enum' => PruneableTestEvent::class]);
 
         $model = TestModel::create(['name' => 'Test']);
+        $now = Carbon::now();
 
-        Carbon::setTestNow(Carbon::now()->subDays(45));
+        Carbon::setTestNow($now->copy()->subDays(45));
         Event::create([
             'type' => PruneableTestEvent::PruneOlderThan30Days->value,
             'eventable_id' => $model->id,
             'eventable_type' => TestModel::class,
         ]);
-        Carbon::setTestNow();
+        Carbon::setTestNow($now);
 
         $this->artisan('eventable:prune', ['--dry-run' => true])
             ->expectsOutputToContain('would be pruned')
@@ -194,8 +205,9 @@ class PruneEventsCommandTest extends TestCase
         config(['eventable.event_enum' => PruneableTestEvent::class]);
 
         $model = TestModel::create(['name' => 'Test']);
+        $now = Carbon::now();
 
-        Carbon::setTestNow(Carbon::now()->subDays(100));
+        Carbon::setTestNow($now->copy()->subDays(100));
         Event::create([
             'type' => PruneableTestEvent::KeepForever->value,
             'eventable_id' => $model->id,
@@ -206,7 +218,7 @@ class PruneEventsCommandTest extends TestCase
             'eventable_id' => $model->id,
             'eventable_type' => TestModel::class,
         ]);
-        Carbon::setTestNow();
+        Carbon::setTestNow($now);
 
         $this->artisan('eventable:prune')
             ->assertExitCode(0);
@@ -219,16 +231,17 @@ class PruneEventsCommandTest extends TestCase
         config(['eventable.event_enum' => PruneableTestEvent::class]);
 
         $model = TestModel::create(['name' => 'Test']);
+        $now = Carbon::now();
 
         for ($i = 0; $i < 3; $i++) {
-            Carbon::setTestNow(Carbon::now()->subDays(45));
+            Carbon::setTestNow($now->copy()->subDays(45));
             Event::create([
                 'type' => PruneableTestEvent::PruneOlderThan30Days->value,
                 'eventable_id' => $model->id,
                 'eventable_type' => TestModel::class,
             ]);
         }
-        Carbon::setTestNow();
+        Carbon::setTestNow($now);
 
         $this->artisan('eventable:prune')
             ->expectsOutputToContain('3 records pruned')
