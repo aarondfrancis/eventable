@@ -1,0 +1,29 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create(config('eventable.table', 'events'), function (Blueprint $table) {
+            $table->id();
+            $table->unsignedInteger('type');
+            $table->unsignedBigInteger('eventable_id');
+            $table->string('eventable_type');
+            $table->json('data')->nullable();
+            $table->timestamps();
+
+            $table->index(['eventable_id', 'eventable_type']);
+            $table->index(['eventable_type', 'type']);
+            $table->index(['type', 'created_at']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists(config('eventable.table', 'events'));
+    }
+};
