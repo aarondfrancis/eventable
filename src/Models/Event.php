@@ -43,7 +43,7 @@ class Event extends Model
         }
 
         if (! is_array($data)) {
-            $query->where('data', $data);
+            $query->where('data', json_encode($data));
 
             return;
         }
