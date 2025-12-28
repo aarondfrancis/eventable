@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2025-12-28
+
 ### Added
 - Event tracking for Eloquent models using polymorphic relationships
 - `Eventable` trait for models to record and query events
@@ -21,4 +23,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Count-based scopes: `whereEventHasHappenedTimes()`, `whereEventHasHappenedAtLeast()`, `whereLatestEventIs()`
 - Date convenience scopes: `happenedBetween()`, `happenedToday()`, `happenedThisWeek()`, `happenedThisMonth()`
 
+
 [Unreleased]: https://github.com/aarondfrancis/eventable/compare/HEAD
+[0.1.0]: https://github.com/aarondfrancis/eventable/releases/tag/v0.1.0
