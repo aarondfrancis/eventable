@@ -1,0 +1,13 @@
+{
+    "title": "Eventable",
+    "description": "A Laravel package for tracking events on Eloquent models using polymorphic relationships",
+    "pages": [
+        { "slug": "index", "title": "Introduction" },
+        { "slug": "installation", "title": "Installation" },
+        { "slug": "configuration", "title": "Configuration" },
+        { "slug": "usage", "title": "Usage" },
+        { "slug": "querying", "title": "Querying Events" },
+        { "slug": "pruning", "title": "Pruning Events" },
+        { "slug": "api-reference", "title": "API Reference" }
+    ]
+}
