@@ -2,6 +2,52 @@
 
 Eventable provides powerful query scopes for filtering events.
 
+## Helper Methods
+
+Quick access to common event information on a model instance.
+
+### Check if an Event Exists
+
+```php
+// Check if the model has a specific event
+$user->hasEvent(EventType::EmailVerified); // true or false
+
+// Check with data matching
+$user->hasEvent(EventType::OrderPlaced, ['currency' => 'USD']);
+```
+
+### Get Latest Event
+
+```php
+// Get the most recent event of any type
+$user->latestEvent();
+
+// Get the most recent event of a specific type
+$user->latestEvent(EventType::OrderPlaced);
+```
+
+### Get First Event
+
+```php
+// Get the oldest event of any type
+$user->firstEvent();
+
+// Get the oldest event of a specific type
+$user->firstEvent(EventType::UserLoggedIn);
+```
+
+### Count Events
+
+```php
+// Count all events
+$user->eventCount(); // 42
+
+// Count events of a specific type
+$user->eventCount(EventType::PageViewed); // 15
+```
+
+---
+
 ## Querying a Model's Events
 
 ### Filter by Type
@@ -58,6 +104,43 @@ $user->events()
 
 These scopes handle timezone conversion automatically.
 
+### Date Range Queries
+
+Use `happenedBetween()` for date range queries:
+
+```php
+use Illuminate\Support\Carbon;
+
+// Events in a specific range
+$user->events()
+    ->happenedBetween(
+        Carbon::parse('2024-01-01'),
+        Carbon::parse('2024-01-31')
+    )
+    ->get();
+```
+
+### Convenience Date Scopes
+
+Quick filters for common time periods:
+
+```php
+// Events from today
+Event::happenedToday()->get();
+
+// Events from this week (starts Monday)
+Event::happenedThisWeek()->get();
+
+// Events from this month
+Event::happenedThisMonth()->get();
+
+// Chain with other scopes
+$user->events()
+    ->ofType(EventType::PageViewed)
+    ->happenedToday()
+    ->get();
+```
+
 ### Chaining Scopes
 
 Combine multiple scopes for complex queries:
@@ -112,6 +195,30 @@ User::whereEventHasntHappened(EventType::OrderPlaced, [
 ])->get();
 ```
 
+### Find Models by Event Count
+
+```php
+// Users who have exactly 3 logins
+User::whereEventHasHappenedTimes(EventType::UserLoggedIn, 3)->get();
+
+// Users who have at least 5 orders
+User::whereEventHasHappenedAtLeast(EventType::OrderPlaced, 5)->get();
+
+// With data matching
+User::whereEventHasHappenedTimes(EventType::OrderPlaced, 2, ['currency' => 'USD'])->get();
+User::whereEventHasHappenedAtLeast(EventType::OrderPlaced, 3, ['currency' => 'USD'])->get();
+```
+
+### Find Models by Latest Event
+
+```php
+// Users whose most recent event is "Subscribed"
+User::whereLatestEventIs(EventType::Subscribed)->get();
+
+// Users whose most recent event is "Churned"
+User::whereLatestEventIs(EventType::Churned)->get();
+```
+
 ### Combining with Other Query Conditions
 
 These scopes work with any other Eloquent query methods:
@@ -126,6 +233,11 @@ User::where('status', 'active')
 // Recently registered users who have made a purchase
 User::where('created_at', '>', now()->subDays(7))
     ->whereEventHasHappened(EventType::OrderPlaced)
+    ->get();
+
+// Power users with at least 10 logins this month
+User::where('plan', 'pro')
+    ->whereEventHasHappenedAtLeast(EventType::UserLoggedIn, 10)
     ->get();
 ```
 

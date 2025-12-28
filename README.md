@@ -87,6 +87,24 @@ $user->addEvent(EventType::OrderPlaced, [
 ]);
 ```
 
+### Helper Methods
+
+```php
+// Check if an event exists
+$user->hasEvent(EventType::EmailVerified); // true or false
+
+// Get the most recent event
+$user->latestEvent(); // or filter by type
+$user->latestEvent(EventType::OrderPlaced);
+
+// Get the first event
+$user->firstEvent(EventType::UserLoggedIn);
+
+// Count events
+$user->eventCount(); // all events
+$user->eventCount(EventType::PageViewed); // by type
+```
+
 ### Querying Events
 
 ```php
@@ -102,6 +120,9 @@ $user->events()->whereData(['order_id' => 123])->get();
 // Time-based queries
 $user->events()->happenedAfter(now()->subDays(7))->get();
 $user->events()->happenedBefore(now()->subMonth())->get();
+$user->events()->happenedToday()->get();
+$user->events()->happenedThisWeek()->get();
+$user->events()->happenedThisMonth()->get();
 ```
 
 ### Querying Models by Events
@@ -115,6 +136,13 @@ User::whereEventHasntHappened(EventType::OrderPlaced)->get();
 
 // With specific data
 User::whereEventHasHappened(EventType::OrderPlaced, ['total' => 99.99])->get();
+
+// Count-based queries
+User::whereEventHasHappenedTimes(EventType::UserLoggedIn, 3)->get(); // exactly 3 times
+User::whereEventHasHappenedAtLeast(EventType::OrderPlaced, 5)->get(); // at least 5 times
+
+// Find by latest event
+User::whereLatestEventIs(EventType::Subscribed)->get();
 ```
 
 ## Pruning Old Events

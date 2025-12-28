@@ -68,6 +68,27 @@ class Event extends Model
         $this->happened($query, $time, before: true);
     }
 
+    public function scopeHappenedBetween($query, Carbon $start, Carbon $end): void
+    {
+        $query->where('created_at', '>', $start->copy()->setTimezone('UTC'))
+            ->where('created_at', '<', $end->copy()->setTimezone('UTC'));
+    }
+
+    public function scopeHappenedToday($query): void
+    {
+        $query->whereDate('created_at', Carbon::today());
+    }
+
+    public function scopeHappenedThisWeek($query): void
+    {
+        $query->where('created_at', '>=', Carbon::now()->startOfWeek());
+    }
+
+    public function scopeHappenedThisMonth($query): void
+    {
+        $query->where('created_at', '>=', Carbon::now()->startOfMonth());
+    }
+
     protected function happened($query, Carbon $time, bool $before = true): void
     {
         $query->where('created_at', $before ? '<' : '>', $time->copy()->setTimezone('UTC'));

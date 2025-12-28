@@ -17,5 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `PruneableEvent` contract for per-event-type retention policies
 - Configurable table names and model classes
 - Morph map registration for cleaner polymorphic types
+- Helper methods on models: `hasEvent()`, `latestEvent()`, `firstEvent()`, `eventCount()`
+- Count-based scopes: `whereEventHasHappenedTimes()`, `whereEventHasHappenedAtLeast()`, `whereLatestEventIs()`
+- Date convenience scopes: `happenedBetween()`, `happenedToday()`, `happenedThisWeek()`, `happenedThisMonth()`
 
 [Unreleased]: https://github.com/aarondfrancis/eventable/compare/HEAD

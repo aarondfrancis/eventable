@@ -50,6 +50,75 @@ $user->events;           // Collection of events
 $user->events()->get();  // Same, via query builder
 ```
 
+#### hasEvent()
+
+Check if the model has a specific event.
+
+```php
+public function hasEvent(BackedEnum $event, array $data = []): bool
+```
+
+**Parameters:**
+- `$event` — The event type to check for
+- `$data` — Optional data constraints
+
+**Example:**
+```php
+$user->hasEvent(EventType::EmailVerified); // true or false
+$user->hasEvent(EventType::OrderPlaced, ['currency' => 'USD']);
+```
+
+#### latestEvent()
+
+Get the most recent event.
+
+```php
+public function latestEvent(?BackedEnum $type = null): ?Event
+```
+
+**Parameters:**
+- `$type` — Optional event type filter
+
+**Example:**
+```php
+$user->latestEvent();                       // Latest event of any type
+$user->latestEvent(EventType::OrderPlaced); // Latest order event
+```
+
+#### firstEvent()
+
+Get the oldest event.
+
+```php
+public function firstEvent(?BackedEnum $type = null): ?Event
+```
+
+**Parameters:**
+- `$type` — Optional event type filter
+
+**Example:**
+```php
+$user->firstEvent();                       // First event of any type
+$user->firstEvent(EventType::UserLoggedIn); // First login event
+```
+
+#### eventCount()
+
+Count events for the model.
+
+```php
+public function eventCount(?BackedEnum $type = null): int
+```
+
+**Parameters:**
+- `$type` — Optional event type filter
+
+**Example:**
+```php
+$user->eventCount();                      // Total event count
+$user->eventCount(EventType::PageViewed); // Count of page views
+```
+
 ### Model Scopes
 
 #### scopeWhereEventHasHappened()
@@ -85,6 +154,61 @@ public function scopeWhereEventHasntHappened($query, BackedEnum $event, array $d
 **Example:**
 ```php
 User::whereEventHasntHappened(EventType::EmailVerified)->get();
+```
+
+#### scopeWhereEventHasHappenedTimes()
+
+Find models with exactly N occurrences of an event.
+
+```php
+public function scopeWhereEventHasHappenedTimes($query, BackedEnum $event, int $count, array $data = []): void
+```
+
+**Parameters:**
+- `$event` — The event type to count
+- `$count` — Exact number of occurrences
+- `$data` — Optional data constraints
+
+**Example:**
+```php
+User::whereEventHasHappenedTimes(EventType::OrderPlaced, 3)->get();
+User::whereEventHasHappenedTimes(EventType::OrderPlaced, 2, ['currency' => 'USD'])->get();
+```
+
+#### scopeWhereEventHasHappenedAtLeast()
+
+Find models with at least N occurrences of an event.
+
+```php
+public function scopeWhereEventHasHappenedAtLeast($query, BackedEnum $event, int $count, array $data = []): void
+```
+
+**Parameters:**
+- `$event` — The event type to count
+- `$count` — Minimum number of occurrences
+- `$data` — Optional data constraints
+
+**Example:**
+```php
+User::whereEventHasHappenedAtLeast(EventType::UserLoggedIn, 5)->get();
+User::whereEventHasHappenedAtLeast(EventType::OrderPlaced, 3, ['currency' => 'USD'])->get();
+```
+
+#### scopeWhereLatestEventIs()
+
+Find models whose most recent event is a specific type.
+
+```php
+public function scopeWhereLatestEventIs($query, BackedEnum $event): void
+```
+
+**Parameters:**
+- `$event` — The event type to match
+
+**Example:**
+```php
+User::whereLatestEventIs(EventType::Subscribed)->get();
+User::whereLatestEventIs(EventType::Churned)->get();
 ```
 
 ---
@@ -182,6 +306,68 @@ public function scopeHappenedBefore($query, Carbon $time): void
 **Example:**
 ```php
 Event::happenedBefore(now()->subMonth())->get();
+```
+
+#### scopeHappenedBetween()
+
+Filter events within a date range.
+
+```php
+public function scopeHappenedBetween($query, Carbon $start, Carbon $end): void
+```
+
+**Parameters:**
+- `$start` — Start of the date range (exclusive)
+- `$end` — End of the date range (exclusive)
+
+**Example:**
+```php
+Event::happenedBetween(
+    Carbon::parse('2024-01-01'),
+    Carbon::parse('2024-01-31')
+)->get();
+```
+
+#### scopeHappenedToday()
+
+Filter events from today.
+
+```php
+public function scopeHappenedToday($query): void
+```
+
+**Example:**
+```php
+Event::happenedToday()->get();
+Event::ofType(EventType::PageViewed)->happenedToday()->count();
+```
+
+#### scopeHappenedThisWeek()
+
+Filter events from the current week (starts Monday).
+
+```php
+public function scopeHappenedThisWeek($query): void
+```
+
+**Example:**
+```php
+Event::happenedThisWeek()->get();
+Event::ofType(EventType::OrderPlaced)->happenedThisWeek()->count();
+```
+
+#### scopeHappenedThisMonth()
+
+Filter events from the current month.
+
+```php
+public function scopeHappenedThisMonth($query): void
+```
+
+**Example:**
+```php
+Event::happenedThisMonth()->get();
+Event::ofType(EventType::UserLoggedIn)->happenedThisMonth()->count();
 ```
 
 ---
