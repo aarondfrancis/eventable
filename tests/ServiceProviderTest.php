@@ -1,77 +1,62 @@
 <?php
 
-namespace AaronFrancis\Eventable\Tests;
-
+use AaronFrancis\Eventable\EventableServiceProvider;
 use AaronFrancis\Eventable\Models\Event;
+use AaronFrancis\Eventable\Tests\Fixtures\TestModel;
+use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Database\Eloquent\Relations\Relation;
 
-class ServiceProviderTest extends TestCase
-{
-    public function test_config_is_merged(): void
-    {
-        $this->assertNotNull(config('eventable'));
-        $this->assertEquals('events', config('eventable.table'));
-    }
+it('merges config', function () {
+    expect(config('eventable'))->not->toBeNull();
+    expect(config('eventable.table'))->toBe('events');
+});
 
-    public function test_morph_map_is_registered(): void
-    {
-        $morphMap = Relation::morphMap();
+it('registers morph map', function () {
+    $morphMap = Relation::morphMap();
 
-        $this->assertArrayHasKey('event', $morphMap);
-        $this->assertEquals(Event::class, $morphMap['event']);
-    }
+    expect($morphMap)->toHaveKey('event');
+    expect($morphMap['event'])->toBe(Event::class);
+});
 
-    public function test_morph_map_can_be_disabled(): void
-    {
-        // Reset morph map
-        Relation::morphMap([], false);
+it('can disable morph map', function () {
+    Relation::morphMap([], false);
 
-        config(['eventable.register_morph_map' => false]);
+    config(['eventable.register_morph_map' => false]);
 
-        // Re-boot the service provider
-        $this->app->register(\AaronFrancis\Eventable\EventableServiceProvider::class, true);
+    $this->app->register(EventableServiceProvider::class, true);
 
-        $morphMap = Relation::morphMap();
+    $morphMap = Relation::morphMap();
 
-        $this->assertArrayNotHasKey('event', $morphMap);
-    }
+    expect($morphMap)->not->toHaveKey('event');
+});
 
-    public function test_custom_morph_alias(): void
-    {
-        // Reset morph map
-        Relation::morphMap([], false);
+it('supports custom morph alias', function () {
+    Relation::morphMap([], false);
 
-        config(['eventable.morph_alias' => 'custom_event']);
+    config(['eventable.morph_alias' => 'custom_event']);
 
-        // Re-boot the service provider
-        $this->app->register(\AaronFrancis\Eventable\EventableServiceProvider::class, true);
+    $this->app->register(EventableServiceProvider::class, true);
 
-        $morphMap = Relation::morphMap();
+    $morphMap = Relation::morphMap();
 
-        $this->assertArrayHasKey('custom_event', $morphMap);
-        $this->assertEquals(Event::class, $morphMap['custom_event']);
-    }
+    expect($morphMap)->toHaveKey('custom_event');
+    expect($morphMap['custom_event'])->toBe(Event::class);
+});
 
-    public function test_custom_event_model_in_morph_map(): void
-    {
-        // Reset morph map
-        Relation::morphMap([], false);
+it('uses custom event model in morph map', function () {
+    Relation::morphMap([], false);
 
-        config(['eventable.model' => \AaronFrancis\Eventable\Tests\Fixtures\TestModel::class]);
+    config(['eventable.model' => TestModel::class]);
 
-        // Re-boot the service provider
-        $this->app->register(\AaronFrancis\Eventable\EventableServiceProvider::class, true);
+    $this->app->register(EventableServiceProvider::class, true);
 
-        $morphMap = Relation::morphMap();
+    $morphMap = Relation::morphMap();
 
-        $this->assertEquals(\AaronFrancis\Eventable\Tests\Fixtures\TestModel::class, $morphMap['event']);
-    }
+    expect($morphMap['event'])->toBe(TestModel::class);
+});
 
-    public function test_command_is_registered(): void
-    {
-        $this->assertTrue(
-            collect($this->app->make(\Illuminate\Contracts\Console\Kernel::class)->all())
-                ->has('eventable:prune')
-        );
-    }
-}
+it('registers prune command', function () {
+    $commands = collect($this->app->make(Kernel::class)->all());
+
+    expect($commands->has('eventable:prune'))->toBeTrue();
+});

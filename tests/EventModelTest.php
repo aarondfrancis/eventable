@@ -1,202 +1,180 @@
 <?php
 
-namespace AaronFrancis\Eventable\Tests;
-
 use AaronFrancis\Eventable\Models\Event;
 use AaronFrancis\Eventable\Tests\Fixtures\TestEvent;
 use AaronFrancis\Eventable\Tests\Fixtures\TestModel;
 use Illuminate\Support\Carbon;
 
-class EventModelTest extends TestCase
-{
-    public function test_uses_configured_table_name(): void
-    {
-        $event = new Event;
+it('uses configured table name', function () {
+    $event = new Event;
 
-        $this->assertEquals('events', $event->getTable());
-    }
+    expect($event->getTable())->toBe('events');
+});
 
-    public function test_uses_custom_table_name_from_config(): void
-    {
-        config(['eventable.table' => 'custom_events']);
+it('uses custom table name from config', function () {
+    config(['eventable.table' => 'custom_events']);
 
-        $event = new Event;
+    $event = new Event;
 
-        $this->assertEquals('custom_events', $event->getTable());
-    }
+    expect($event->getTable())->toBe('custom_events');
+});
 
-    public function test_data_is_cast_to_json(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
-        $event = $model->addEvent(TestEvent::Created, ['key' => 'value']);
+it('casts data to json', function () {
+    $model = TestModel::create(['name' => 'Test']);
+    $event = $model->addEvent(TestEvent::Created, ['key' => 'value']);
 
-        $freshEvent = Event::find($event->id);
+    $freshEvent = Event::find($event->id);
 
-        $this->assertIsArray($freshEvent->data);
-        $this->assertEquals(['key' => 'value'], $freshEvent->data);
-    }
+    expect($freshEvent->data)->toBeArray();
+    expect($freshEvent->data)->toBe(['key' => 'value']);
+});
 
-    public function test_scope_of_type_with_enum(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
-        $model->addEvent(TestEvent::Created);
-        $model->addEvent(TestEvent::Updated);
-        $model->addEvent(TestEvent::Updated);
+it('filters with ofType scope using enum', function () {
+    $model = TestModel::create(['name' => 'Test']);
+    $model->addEvent(TestEvent::Created);
+    $model->addEvent(TestEvent::Updated);
+    $model->addEvent(TestEvent::Updated);
 
-        $events = Event::ofType(TestEvent::Updated)->get();
+    $events = Event::ofType(TestEvent::Updated)->get();
 
-        $this->assertCount(2, $events);
-    }
+    expect($events)->toHaveCount(2);
+});
 
-    public function test_scope_of_type_with_integer(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
-        $model->addEvent(TestEvent::Created);
-        $model->addEvent(TestEvent::Updated);
+it('filters with ofType scope using integer', function () {
+    $model = TestModel::create(['name' => 'Test']);
+    $model->addEvent(TestEvent::Created);
+    $model->addEvent(TestEvent::Updated);
 
-        $events = Event::ofType(TestEvent::Created->value)->get();
+    $events = Event::ofType(TestEvent::Created->value)->get();
 
-        $this->assertCount(1, $events);
-    }
+    expect($events)->toHaveCount(1);
+});
 
-    public function test_scope_of_type_with_array(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
-        $model->addEvent(TestEvent::Created);
-        $model->addEvent(TestEvent::Updated);
-        $model->addEvent(TestEvent::Deleted);
+it('filters with ofType scope using array', function () {
+    $model = TestModel::create(['name' => 'Test']);
+    $model->addEvent(TestEvent::Created);
+    $model->addEvent(TestEvent::Updated);
+    $model->addEvent(TestEvent::Deleted);
 
-        $events = Event::ofType([TestEvent::Created->value, TestEvent::Updated->value])->get();
+    $events = Event::ofType([TestEvent::Created->value, TestEvent::Updated->value])->get();
 
-        $this->assertCount(2, $events);
-    }
+    expect($events)->toHaveCount(2);
+});
 
-    public function test_scope_of_type_with_array_of_enums(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
-        $model->addEvent(TestEvent::Created);
-        $model->addEvent(TestEvent::Updated);
-        $model->addEvent(TestEvent::Deleted);
+it('filters with ofType scope using array of enum values', function () {
+    $model = TestModel::create(['name' => 'Test']);
+    $model->addEvent(TestEvent::Created);
+    $model->addEvent(TestEvent::Updated);
+    $model->addEvent(TestEvent::Deleted);
 
-        // Note: When passing array of enums, you must use ->value
-        // The scope only handles single enum objects, not arrays of enums
-        $events = Event::ofType([TestEvent::Created->value, TestEvent::Deleted->value])->get();
+    $events = Event::ofType([TestEvent::Created->value, TestEvent::Deleted->value])->get();
 
-        $this->assertCount(2, $events);
-    }
+    expect($events)->toHaveCount(2);
+});
 
-    public function test_scope_where_data_with_empty_data(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
-        $model->addEvent(TestEvent::Created, ['key' => 'value']);
-        $model->addEvent(TestEvent::Updated);
+it('filters with whereData scope with empty data', function () {
+    $model = TestModel::create(['name' => 'Test']);
+    $model->addEvent(TestEvent::Created, ['key' => 'value']);
+    $model->addEvent(TestEvent::Updated);
 
-        $events = Event::whereData([])->get();
+    $events = Event::whereData([])->get();
 
-        $this->assertCount(2, $events);
-    }
+    expect($events)->toHaveCount(2);
+});
 
-    public function test_scope_where_data_with_scalar(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
-        $model->addEvent(TestEvent::Created, 'simple-value');
-        $model->addEvent(TestEvent::Updated, 'other-value');
+it('filters with whereData scope with scalar', function () {
+    $model = TestModel::create(['name' => 'Test']);
+    $model->addEvent(TestEvent::Created, 'simple-value');
+    $model->addEvent(TestEvent::Updated, 'other-value');
 
-        $events = Event::whereData('simple-value')->get();
+    $events = Event::whereData('simple-value')->get();
 
-        $this->assertCount(1, $events);
-    }
+    expect($events)->toHaveCount(1);
+});
 
-    public function test_scope_where_data_with_array(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
-        $model->addEvent(TestEvent::Updated, ['field' => 'name', 'old' => 'Old']);
-        $model->addEvent(TestEvent::Updated, ['field' => 'email', 'old' => 'old@test.com']);
+it('filters with whereData scope with array', function () {
+    $model = TestModel::create(['name' => 'Test']);
+    $model->addEvent(TestEvent::Updated, ['field' => 'name', 'old' => 'Old']);
+    $model->addEvent(TestEvent::Updated, ['field' => 'email', 'old' => 'old@test.com']);
 
-        $events = Event::whereData(['field' => 'name'])->get();
+    $events = Event::whereData(['field' => 'name'])->get();
 
-        $this->assertCount(1, $events);
-    }
+    expect($events)->toHaveCount(1);
+});
 
-    public function test_scope_where_data_with_nested_array(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
-        $model->addEvent(TestEvent::Updated, ['changes' => ['field' => 'name']]);
-        $model->addEvent(TestEvent::Updated, ['changes' => ['field' => 'email']]);
+it('filters with whereData scope with nested array', function () {
+    $model = TestModel::create(['name' => 'Test']);
+    $model->addEvent(TestEvent::Updated, ['changes' => ['field' => 'name']]);
+    $model->addEvent(TestEvent::Updated, ['changes' => ['field' => 'email']]);
 
-        $events = Event::whereData(['changes' => ['field' => 'name']])->get();
+    $events = Event::whereData(['changes' => ['field' => 'name']])->get();
 
-        $this->assertCount(1, $events);
-    }
+    expect($events)->toHaveCount(1);
+});
 
-    public function test_scope_happened_after(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+it('filters with happenedAfter scope', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-        Carbon::setTestNow('2024-01-15 12:00:00');
-        $model->addEvent(TestEvent::Created);
+    Carbon::setTestNow('2024-01-15 12:00:00');
+    $model->addEvent(TestEvent::Created);
 
-        Carbon::setTestNow('2024-01-20 12:00:00');
-        $model->addEvent(TestEvent::Updated);
+    Carbon::setTestNow('2024-01-20 12:00:00');
+    $model->addEvent(TestEvent::Updated);
 
-        Carbon::setTestNow('2024-01-25 12:00:00');
-        $model->addEvent(TestEvent::Viewed);
+    Carbon::setTestNow('2024-01-25 12:00:00');
+    $model->addEvent(TestEvent::Viewed);
 
-        $events = Event::happenedAfter(Carbon::parse('2024-01-18'))->get();
+    $events = Event::happenedAfter(Carbon::parse('2024-01-18'))->get();
 
-        $this->assertCount(2, $events);
+    expect($events)->toHaveCount(2);
 
-        Carbon::setTestNow();
-    }
+    Carbon::setTestNow();
+});
 
-    public function test_scope_happened_before(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+it('filters with happenedBefore scope', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-        Carbon::setTestNow('2024-01-15 12:00:00');
-        $model->addEvent(TestEvent::Created);
+    Carbon::setTestNow('2024-01-15 12:00:00');
+    $model->addEvent(TestEvent::Created);
 
-        Carbon::setTestNow('2024-01-20 12:00:00');
-        $model->addEvent(TestEvent::Updated);
+    Carbon::setTestNow('2024-01-20 12:00:00');
+    $model->addEvent(TestEvent::Updated);
 
-        Carbon::setTestNow('2024-01-25 12:00:00');
-        $model->addEvent(TestEvent::Viewed);
+    Carbon::setTestNow('2024-01-25 12:00:00');
+    $model->addEvent(TestEvent::Viewed);
 
-        $events = Event::happenedBefore(Carbon::parse('2024-01-22'))->get();
+    $events = Event::happenedBefore(Carbon::parse('2024-01-22'))->get();
 
-        $this->assertCount(2, $events);
+    expect($events)->toHaveCount(2);
 
-        Carbon::setTestNow();
-    }
+    Carbon::setTestNow();
+});
 
-    public function test_eventable_relationship(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
-        $event = $model->addEvent(TestEvent::Created);
+it('resolves eventable relationship', function () {
+    $model = TestModel::create(['name' => 'Test']);
+    $event = $model->addEvent(TestEvent::Created);
 
-        $freshEvent = Event::find($event->id);
+    $freshEvent = Event::find($event->id);
 
-        $this->assertInstanceOf(TestModel::class, $freshEvent->eventable);
-        $this->assertEquals($model->id, $freshEvent->eventable->id);
-    }
+    expect($freshEvent->eventable)->toBeInstanceOf(TestModel::class);
+    expect($freshEvent->eventable->id)->toBe($model->id);
+});
 
-    public function test_chained_scopes(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+it('chains scopes', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-        Carbon::setTestNow('2024-01-15 12:00:00');
-        $model->addEvent(TestEvent::Updated, ['field' => 'name']);
+    Carbon::setTestNow('2024-01-15 12:00:00');
+    $model->addEvent(TestEvent::Updated, ['field' => 'name']);
 
-        Carbon::setTestNow('2024-01-25 12:00:00');
-        $model->addEvent(TestEvent::Updated, ['field' => 'email']);
+    Carbon::setTestNow('2024-01-25 12:00:00');
+    $model->addEvent(TestEvent::Updated, ['field' => 'email']);
 
-        $events = Event::ofType(TestEvent::Updated)
-            ->whereData(['field' => 'name'])
-            ->happenedBefore(Carbon::parse('2024-01-20'))
-            ->get();
+    $events = Event::ofType(TestEvent::Updated)
+        ->whereData(['field' => 'name'])
+        ->happenedBefore(Carbon::parse('2024-01-20'))
+        ->get();
 
-        $this->assertCount(1, $events);
+    expect($events)->toHaveCount(1);
 
-        Carbon::setTestNow();
-    }
-}
+    Carbon::setTestNow();
+});

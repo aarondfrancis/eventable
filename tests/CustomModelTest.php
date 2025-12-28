@@ -1,67 +1,57 @@
 <?php
 
-namespace AaronFrancis\Eventable\Tests;
-
 use AaronFrancis\Eventable\Models\Event;
 use AaronFrancis\Eventable\Tests\Fixtures\CustomEvent;
 use AaronFrancis\Eventable\Tests\Fixtures\TestEvent;
 use AaronFrancis\Eventable\Tests\Fixtures\TestModel;
 
-class CustomModelTest extends TestCase
-{
-    public function test_can_use_custom_event_model(): void
-    {
-        config(['eventable.model' => CustomEvent::class]);
+it('can use custom event model', function () {
+    config(['eventable.model' => CustomEvent::class]);
 
-        $model = TestModel::create(['name' => 'Test']);
-        $event = $model->addEvent(TestEvent::Created);
+    $model = TestModel::create(['name' => 'Test']);
+    $event = $model->addEvent(TestEvent::Created);
 
-        $this->assertInstanceOf(CustomEvent::class, $event);
-    }
+    expect($event)->toBeInstanceOf(CustomEvent::class);
+});
 
-    public function test_custom_event_model_has_custom_attributes(): void
-    {
-        config(['eventable.model' => CustomEvent::class]);
+it('custom event model has custom attributes', function () {
+    config(['eventable.model' => CustomEvent::class]);
 
-        $model = TestModel::create(['name' => 'Test']);
-        $event = $model->addEvent(TestEvent::Created);
+    $model = TestModel::create(['name' => 'Test']);
+    $event = $model->addEvent(TestEvent::Created);
 
-        $this->assertEquals('custom_value', $event->custom_attribute);
-    }
+    expect($event->custom_attribute)->toBe('custom_value');
+});
 
-    public function test_events_relationship_uses_custom_model(): void
-    {
-        config(['eventable.model' => CustomEvent::class]);
+it('events relationship uses custom model', function () {
+    config(['eventable.model' => CustomEvent::class]);
 
-        $model = TestModel::create(['name' => 'Test']);
-        $model->addEvent(TestEvent::Created);
-        $model->addEvent(TestEvent::Updated);
+    $model = TestModel::create(['name' => 'Test']);
+    $model->addEvent(TestEvent::Created);
+    $model->addEvent(TestEvent::Updated);
 
-        $events = $model->events;
+    $events = $model->events;
 
-        $this->assertCount(2, $events);
-        $this->assertInstanceOf(CustomEvent::class, $events->first());
-    }
+    expect($events)->toHaveCount(2);
+    expect($events->first())->toBeInstanceOf(CustomEvent::class);
+});
 
-    public function test_custom_table_name(): void
-    {
-        config(['eventable.table' => 'activity_log']);
+it('uses custom table name', function () {
+    config(['eventable.table' => 'activity_log']);
 
-        $event = new Event;
+    $event = new Event;
 
-        $this->assertEquals('activity_log', $event->getTable());
-    }
+    expect($event->getTable())->toBe('activity_log');
+});
 
-    public function test_scopes_work_with_custom_model(): void
-    {
-        config(['eventable.model' => CustomEvent::class]);
+it('scopes work with custom model', function () {
+    config(['eventable.model' => CustomEvent::class]);
 
-        $model = TestModel::create(['name' => 'Test']);
-        $model->addEvent(TestEvent::Created);
-        $model->addEvent(TestEvent::Updated);
+    $model = TestModel::create(['name' => 'Test']);
+    $model->addEvent(TestEvent::Created);
+    $model->addEvent(TestEvent::Updated);
 
-        $models = TestModel::whereEventHasHappened(TestEvent::Created)->get();
+    $models = TestModel::whereEventHasHappened(TestEvent::Created)->get();
 
-        $this->assertCount(1, $models);
-    }
-}
+    expect($models)->toHaveCount(1);
+});

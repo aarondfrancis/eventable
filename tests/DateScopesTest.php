@@ -1,459 +1,407 @@
 <?php
 
-namespace AaronFrancis\Eventable\Tests;
-
 use AaronFrancis\Eventable\Models\Event;
 use AaronFrancis\Eventable\Tests\Fixtures\TestEvent;
 use AaronFrancis\Eventable\Tests\Fixtures\TestModel;
 use Carbon\Unit;
 use Illuminate\Support\Carbon;
 
-class DateScopesTest extends TestCase
-{
-    protected function tearDown(): void
-    {
-        Carbon::setTestNow();
-        parent::tearDown();
-    }
+afterEach(function () {
+    Carbon::setTestNow();
+});
 
-    /*
-    |--------------------------------------------------------------------------
-    | happenedBetween() Tests
-    |--------------------------------------------------------------------------
-    */
-    public function test_happened_between_includes_events_in_range(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+/*
+|--------------------------------------------------------------------------
+| happenedBetween() Tests
+|--------------------------------------------------------------------------
+*/
 
-        Carbon::setTestNow('2024-01-10 12:00:00');
-        $model->addEvent(TestEvent::Created);
+it('happenedBetween includes events in range', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-        Carbon::setTestNow('2024-01-15 12:00:00');
-        $model->addEvent(TestEvent::Updated);
+    Carbon::setTestNow('2024-01-10 12:00:00');
+    $model->addEvent(TestEvent::Created);
 
-        Carbon::setTestNow('2024-01-20 12:00:00');
-        $model->addEvent(TestEvent::Viewed);
+    Carbon::setTestNow('2024-01-15 12:00:00');
+    $model->addEvent(TestEvent::Updated);
 
-        Carbon::setTestNow();
+    Carbon::setTestNow('2024-01-20 12:00:00');
+    $model->addEvent(TestEvent::Viewed);
 
-        $events = Event::happenedBetween(
-            Carbon::parse('2024-01-12'),
-            Carbon::parse('2024-01-18')
-        )->get();
+    Carbon::setTestNow();
 
-        $this->assertCount(1, $events);
-    }
+    $events = Event::happenedBetween(
+        Carbon::parse('2024-01-12'),
+        Carbon::parse('2024-01-18')
+    )->get();
 
-    public function test_happened_between_excludes_boundary_events(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+    expect($events)->toHaveCount(1);
+});
 
-        Carbon::setTestNow('2024-01-15 00:00:00');
-        $model->addEvent(TestEvent::Created);
+it('happenedBetween excludes boundary events', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-        Carbon::setTestNow('2024-01-15 12:00:00');
-        $model->addEvent(TestEvent::Updated);
+    Carbon::setTestNow('2024-01-15 00:00:00');
+    $model->addEvent(TestEvent::Created);
 
-        Carbon::setTestNow('2024-01-16 00:00:00');
-        $model->addEvent(TestEvent::Viewed);
+    Carbon::setTestNow('2024-01-15 12:00:00');
+    $model->addEvent(TestEvent::Updated);
 
-        Carbon::setTestNow();
+    Carbon::setTestNow('2024-01-16 00:00:00');
+    $model->addEvent(TestEvent::Viewed);
 
-        // Between 00:00 and 23:59 of Jan 15 - should only get the middle event
-        $events = Event::happenedBetween(
-            Carbon::parse('2024-01-15 00:00:00'),
-            Carbon::parse('2024-01-15 23:59:59')
-        )->get();
+    Carbon::setTestNow();
 
-        $this->assertCount(1, $events);
-        $this->assertEquals(TestEvent::Updated->value, $events->first()->type);
-    }
+    $events = Event::happenedBetween(
+        Carbon::parse('2024-01-15 00:00:00'),
+        Carbon::parse('2024-01-15 23:59:59')
+    )->get();
 
-    public function test_happened_between_with_no_events_in_range(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+    expect($events)->toHaveCount(1);
+    expect($events->first()->type)->toBe(TestEvent::Updated->value);
+});
 
-        Carbon::setTestNow('2024-01-01 12:00:00');
-        $model->addEvent(TestEvent::Created);
+it('happenedBetween with no events in range', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-        Carbon::setTestNow('2024-01-30 12:00:00');
-        $model->addEvent(TestEvent::Updated);
+    Carbon::setTestNow('2024-01-01 12:00:00');
+    $model->addEvent(TestEvent::Created);
 
-        Carbon::setTestNow();
+    Carbon::setTestNow('2024-01-30 12:00:00');
+    $model->addEvent(TestEvent::Updated);
 
-        $events = Event::happenedBetween(
-            Carbon::parse('2024-01-10'),
-            Carbon::parse('2024-01-20')
-        )->get();
+    Carbon::setTestNow();
 
-        $this->assertCount(0, $events);
-    }
+    $events = Event::happenedBetween(
+        Carbon::parse('2024-01-10'),
+        Carbon::parse('2024-01-20')
+    )->get();
 
-    /*
-    |--------------------------------------------------------------------------
-    | happenedToday() Tests
-    |--------------------------------------------------------------------------
-    */
-    public function test_happened_today_returns_only_todays_events(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+    expect($events)->toHaveCount(0);
+});
 
-        Carbon::setTestNow('2024-06-15 08:00:00');
-        $model->addEvent(TestEvent::Created);
+/*
+|--------------------------------------------------------------------------
+| happenedToday() Tests
+|--------------------------------------------------------------------------
+*/
 
-        Carbon::setTestNow('2024-06-15 14:00:00');
-        $model->addEvent(TestEvent::Updated);
+it('happenedToday returns only todays events', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-        Carbon::setTestNow('2024-06-14 12:00:00');
-        $model->addEvent(TestEvent::Viewed);
+    Carbon::setTestNow('2024-06-15 08:00:00');
+    $model->addEvent(TestEvent::Created);
 
-        Carbon::setTestNow('2024-06-15 20:00:00');
+    Carbon::setTestNow('2024-06-15 14:00:00');
+    $model->addEvent(TestEvent::Updated);
 
-        $events = Event::happenedToday()->get();
+    Carbon::setTestNow('2024-06-14 12:00:00');
+    $model->addEvent(TestEvent::Viewed);
 
-        $this->assertCount(2, $events);
-    }
+    Carbon::setTestNow('2024-06-15 20:00:00');
 
-    public function test_happened_today_with_no_events_today(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+    $events = Event::happenedToday()->get();
 
-        Carbon::setTestNow('2024-06-14 12:00:00');
-        $model->addEvent(TestEvent::Created);
+    expect($events)->toHaveCount(2);
+});
 
-        Carbon::setTestNow('2024-06-15 12:00:00');
+it('happenedToday with no events today', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-        $events = Event::happenedToday()->get();
+    Carbon::setTestNow('2024-06-14 12:00:00');
+    $model->addEvent(TestEvent::Created);
 
-        $this->assertCount(0, $events);
-    }
+    Carbon::setTestNow('2024-06-15 12:00:00');
 
-    /*
-    |--------------------------------------------------------------------------
-    | happenedThisWeek() Tests
-    |--------------------------------------------------------------------------
-    */
-    public function test_happened_this_week_returns_events_from_current_week(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+    $events = Event::happenedToday()->get();
 
-        // Assuming week starts on Monday
-        // Set "now" to Wednesday June 19, 2024
-        Carbon::setTestNow('2024-06-19 12:00:00');
+    expect($events)->toHaveCount(0);
+});
 
-        // Event on Monday (this week)
-        Carbon::setTestNow('2024-06-17 12:00:00');
-        $model->addEvent(TestEvent::Created);
+/*
+|--------------------------------------------------------------------------
+| happenedThisWeek() Tests
+|--------------------------------------------------------------------------
+*/
 
-        // Event on Tuesday (this week)
-        Carbon::setTestNow('2024-06-18 12:00:00');
-        $model->addEvent(TestEvent::Updated);
+it('happenedThisWeek returns events from current week', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-        // Event last week (Sunday)
-        Carbon::setTestNow('2024-06-16 12:00:00');
-        $model->addEvent(TestEvent::Viewed);
+    Carbon::setTestNow('2024-06-19 12:00:00');
 
-        // Reset to Wednesday
-        Carbon::setTestNow('2024-06-19 12:00:00');
+    Carbon::setTestNow('2024-06-17 12:00:00');
+    $model->addEvent(TestEvent::Created);
 
-        $events = Event::happenedThisWeek()->get();
+    Carbon::setTestNow('2024-06-18 12:00:00');
+    $model->addEvent(TestEvent::Updated);
 
-        $this->assertCount(2, $events);
-    }
+    Carbon::setTestNow('2024-06-16 12:00:00');
+    $model->addEvent(TestEvent::Viewed);
 
-    public function test_happened_this_week_includes_start_of_week(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+    Carbon::setTestNow('2024-06-19 12:00:00');
 
-        // Wednesday June 19, 2024
-        Carbon::setTestNow('2024-06-19 12:00:00');
-        $startOfWeek = Carbon::now()->startOfWeek();
+    $events = Event::happenedThisWeek()->get();
 
-        // Event at exact start of week
-        Carbon::setTestNow($startOfWeek);
-        $model->addEvent(TestEvent::Created);
+    expect($events)->toHaveCount(2);
+});
 
-        Carbon::setTestNow('2024-06-19 12:00:00');
+it('happenedThisWeek includes start of week', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-        $events = Event::happenedThisWeek()->get();
+    Carbon::setTestNow('2024-06-19 12:00:00');
+    $startOfWeek = Carbon::now()->startOfWeek();
 
-        $this->assertCount(1, $events);
-    }
+    Carbon::setTestNow($startOfWeek);
+    $model->addEvent(TestEvent::Created);
 
-    /*
-    |--------------------------------------------------------------------------
-    | happenedThisMonth() Tests
-    |--------------------------------------------------------------------------
-    */
-    public function test_happened_this_month_returns_events_from_current_month(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+    Carbon::setTestNow('2024-06-19 12:00:00');
 
-        // Set "now" to June 15, 2024
-        Carbon::setTestNow('2024-06-15 12:00:00');
+    $events = Event::happenedThisWeek()->get();
 
-        // Event on June 1
-        Carbon::setTestNow('2024-06-01 12:00:00');
-        $model->addEvent(TestEvent::Created);
+    expect($events)->toHaveCount(1);
+});
 
-        // Event on June 10
-        Carbon::setTestNow('2024-06-10 12:00:00');
-        $model->addEvent(TestEvent::Updated);
+/*
+|--------------------------------------------------------------------------
+| happenedThisMonth() Tests
+|--------------------------------------------------------------------------
+*/
 
-        // Event in May (last month)
-        Carbon::setTestNow('2024-05-31 12:00:00');
-        $model->addEvent(TestEvent::Viewed);
+it('happenedThisMonth returns events from current month', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-        // Reset to June 15
-        Carbon::setTestNow('2024-06-15 12:00:00');
+    Carbon::setTestNow('2024-06-15 12:00:00');
 
-        $events = Event::happenedThisMonth()->get();
+    Carbon::setTestNow('2024-06-01 12:00:00');
+    $model->addEvent(TestEvent::Created);
 
-        $this->assertCount(2, $events);
-    }
+    Carbon::setTestNow('2024-06-10 12:00:00');
+    $model->addEvent(TestEvent::Updated);
 
-    public function test_happened_this_month_includes_start_of_month(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+    Carbon::setTestNow('2024-05-31 12:00:00');
+    $model->addEvent(TestEvent::Viewed);
 
-        Carbon::setTestNow('2024-06-15 12:00:00');
-        $startOfMonth = Carbon::now()->startOfMonth();
+    Carbon::setTestNow('2024-06-15 12:00:00');
 
-        // Event at exact start of month
-        Carbon::setTestNow($startOfMonth);
-        $model->addEvent(TestEvent::Created);
+    $events = Event::happenedThisMonth()->get();
 
-        Carbon::setTestNow('2024-06-15 12:00:00');
+    expect($events)->toHaveCount(2);
+});
 
-        $events = Event::happenedThisMonth()->get();
+it('happenedThisMonth includes start of month', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-        $this->assertCount(1, $events);
-    }
+    Carbon::setTestNow('2024-06-15 12:00:00');
+    $startOfMonth = Carbon::now()->startOfMonth();
 
-    public function test_happened_this_month_excludes_previous_month(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+    Carbon::setTestNow($startOfMonth);
+    $model->addEvent(TestEvent::Created);
 
-        // Create event on last day of May
-        Carbon::setTestNow('2024-05-31 23:59:59');
-        $model->addEvent(TestEvent::Created);
+    Carbon::setTestNow('2024-06-15 12:00:00');
 
-        // Query in June
-        Carbon::setTestNow('2024-06-01 00:00:01');
+    $events = Event::happenedThisMonth()->get();
 
-        $events = Event::happenedThisMonth()->get();
+    expect($events)->toHaveCount(1);
+});
 
-        $this->assertCount(0, $events);
-    }
+it('happenedThisMonth excludes previous month', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-    /*
-    |--------------------------------------------------------------------------
-    | Chaining Date Scopes Tests
-    |--------------------------------------------------------------------------
-    */
-    public function test_can_chain_date_scopes_with_type(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+    Carbon::setTestNow('2024-05-31 23:59:59');
+    $model->addEvent(TestEvent::Created);
 
-        Carbon::setTestNow('2024-06-15 10:00:00');
-        $model->addEvent(TestEvent::Created);
+    Carbon::setTestNow('2024-06-01 00:00:01');
 
-        Carbon::setTestNow('2024-06-15 12:00:00');
-        $model->addEvent(TestEvent::Updated);
+    $events = Event::happenedThisMonth()->get();
 
-        Carbon::setTestNow('2024-06-15 14:00:00');
-        $model->addEvent(TestEvent::Updated);
+    expect($events)->toHaveCount(0);
+});
 
-        Carbon::setTestNow('2024-06-15 16:00:00');
+/*
+|--------------------------------------------------------------------------
+| Chaining Date Scopes Tests
+|--------------------------------------------------------------------------
+*/
 
-        $events = Event::ofType(TestEvent::Updated)->happenedToday()->get();
+it('can chain date scopes with type', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-        $this->assertCount(2, $events);
-    }
+    Carbon::setTestNow('2024-06-15 10:00:00');
+    $model->addEvent(TestEvent::Created);
 
-    public function test_can_chain_between_with_other_scopes(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+    Carbon::setTestNow('2024-06-15 12:00:00');
+    $model->addEvent(TestEvent::Updated);
 
-        Carbon::setTestNow('2024-06-15 10:00:00');
-        $model->addEvent(TestEvent::Updated, ['field' => 'name']);
+    Carbon::setTestNow('2024-06-15 14:00:00');
+    $model->addEvent(TestEvent::Updated);
 
-        Carbon::setTestNow('2024-06-15 12:00:00');
-        $model->addEvent(TestEvent::Updated, ['field' => 'email']);
+    Carbon::setTestNow('2024-06-15 16:00:00');
 
-        Carbon::setTestNow('2024-06-15 14:00:00');
-        $model->addEvent(TestEvent::Updated, ['field' => 'name']);
+    $events = Event::ofType(TestEvent::Updated)->happenedToday()->get();
 
-        Carbon::setTestNow();
+    expect($events)->toHaveCount(2);
+});
 
-        $events = Event::ofType(TestEvent::Updated)
-            ->whereData(['field' => 'name'])
-            ->happenedBetween(
-                Carbon::parse('2024-06-15 09:00:00'),
-                Carbon::parse('2024-06-15 13:00:00')
-            )
-            ->get();
+it('can chain between with other scopes', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-        $this->assertCount(1, $events);
-    }
+    Carbon::setTestNow('2024-06-15 10:00:00');
+    $model->addEvent(TestEvent::Updated, ['field' => 'name']);
 
-    /*
-    |--------------------------------------------------------------------------
-    | happenedInTheLast() Tests
-    |--------------------------------------------------------------------------
-    */
-    public function test_happened_in_the_last_days(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+    Carbon::setTestNow('2024-06-15 12:00:00');
+    $model->addEvent(TestEvent::Updated, ['field' => 'email']);
 
-        Carbon::setTestNow('2024-06-15 12:00:00');
+    Carbon::setTestNow('2024-06-15 14:00:00');
+    $model->addEvent(TestEvent::Updated, ['field' => 'name']);
 
-        // Event 3 days ago
-        Carbon::setTestNow('2024-06-12 12:00:00');
-        $model->addEvent(TestEvent::Created);
+    Carbon::setTestNow();
 
-        // Event 10 days ago
-        Carbon::setTestNow('2024-06-05 12:00:00');
-        $model->addEvent(TestEvent::Updated);
+    $events = Event::ofType(TestEvent::Updated)
+        ->whereData(['field' => 'name'])
+        ->happenedBetween(
+            Carbon::parse('2024-06-15 09:00:00'),
+            Carbon::parse('2024-06-15 13:00:00')
+        )
+        ->get();
 
-        Carbon::setTestNow('2024-06-15 12:00:00');
+    expect($events)->toHaveCount(1);
+});
 
-        $events = Event::happenedInTheLast(7, 'days')->get();
+/*
+|--------------------------------------------------------------------------
+| happenedInTheLast() Tests
+|--------------------------------------------------------------------------
+*/
 
-        $this->assertCount(1, $events);
-    }
+it('happenedInTheLast days', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-    public function test_happened_in_the_last_hours(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+    Carbon::setTestNow('2024-06-15 12:00:00');
 
-        Carbon::setTestNow('2024-06-15 12:00:00');
+    Carbon::setTestNow('2024-06-12 12:00:00');
+    $model->addEvent(TestEvent::Created);
 
-        // Event 2 hours ago
-        Carbon::setTestNow('2024-06-15 10:00:00');
-        $model->addEvent(TestEvent::Created);
+    Carbon::setTestNow('2024-06-05 12:00:00');
+    $model->addEvent(TestEvent::Updated);
 
-        // Event 5 hours ago
-        Carbon::setTestNow('2024-06-15 07:00:00');
-        $model->addEvent(TestEvent::Updated);
+    Carbon::setTestNow('2024-06-15 12:00:00');
 
-        Carbon::setTestNow('2024-06-15 12:00:00');
+    $events = Event::happenedInTheLast(7, 'days')->get();
 
-        $events = Event::happenedInTheLast(3, 'hours')->get();
+    expect($events)->toHaveCount(1);
+});
 
-        $this->assertCount(1, $events);
-    }
+it('happenedInTheLast hours', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-    public function test_happened_in_the_last_months(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+    Carbon::setTestNow('2024-06-15 12:00:00');
 
-        Carbon::setTestNow('2024-06-15 12:00:00');
+    Carbon::setTestNow('2024-06-15 10:00:00');
+    $model->addEvent(TestEvent::Created);
 
-        // Event 1 month ago
-        Carbon::setTestNow('2024-05-15 12:00:00');
-        $model->addEvent(TestEvent::Created);
+    Carbon::setTestNow('2024-06-15 07:00:00');
+    $model->addEvent(TestEvent::Updated);
 
-        // Event 4 months ago
-        Carbon::setTestNow('2024-02-15 12:00:00');
-        $model->addEvent(TestEvent::Updated);
+    Carbon::setTestNow('2024-06-15 12:00:00');
 
-        Carbon::setTestNow('2024-06-15 12:00:00');
+    $events = Event::happenedInTheLast(3, 'hours')->get();
 
-        $events = Event::happenedInTheLast(3, 'months')->get();
+    expect($events)->toHaveCount(1);
+});
 
-        $this->assertCount(1, $events);
-    }
+it('happenedInTheLast months', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-    /*
-    |--------------------------------------------------------------------------
-    | hasntHappenedInTheLast() Tests
-    |--------------------------------------------------------------------------
-    */
-    public function test_hasnt_happened_in_the_last_days(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+    Carbon::setTestNow('2024-06-15 12:00:00');
 
-        Carbon::setTestNow('2024-06-15 12:00:00');
+    Carbon::setTestNow('2024-05-15 12:00:00');
+    $model->addEvent(TestEvent::Created);
 
-        // Event 3 days ago (should be excluded)
-        Carbon::setTestNow('2024-06-12 12:00:00');
-        $model->addEvent(TestEvent::Created);
+    Carbon::setTestNow('2024-02-15 12:00:00');
+    $model->addEvent(TestEvent::Updated);
 
-        // Event 10 days ago (should be included)
-        Carbon::setTestNow('2024-06-05 12:00:00');
-        $model->addEvent(TestEvent::Updated);
+    Carbon::setTestNow('2024-06-15 12:00:00');
 
-        Carbon::setTestNow('2024-06-15 12:00:00');
+    $events = Event::happenedInTheLast(3, 'months')->get();
 
-        $events = Event::hasntHappenedInTheLast(7, 'days')->get();
+    expect($events)->toHaveCount(1);
+});
 
-        $this->assertCount(1, $events);
-        $this->assertEquals(TestEvent::Updated->value, $events->first()->type);
-    }
+/*
+|--------------------------------------------------------------------------
+| hasntHappenedInTheLast() Tests
+|--------------------------------------------------------------------------
+*/
 
-    public function test_hasnt_happened_in_the_last_weeks(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+it('hasntHappenedInTheLast days', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-        Carbon::setTestNow('2024-06-15 12:00:00');
+    Carbon::setTestNow('2024-06-15 12:00:00');
 
-        // Event 1 week ago (should be excluded)
-        Carbon::setTestNow('2024-06-08 12:00:00');
-        $model->addEvent(TestEvent::Created);
+    Carbon::setTestNow('2024-06-12 12:00:00');
+    $model->addEvent(TestEvent::Created);
 
-        // Event 3 weeks ago (should be included)
-        Carbon::setTestNow('2024-05-25 12:00:00');
-        $model->addEvent(TestEvent::Updated);
+    Carbon::setTestNow('2024-06-05 12:00:00');
+    $model->addEvent(TestEvent::Updated);
 
-        Carbon::setTestNow('2024-06-15 12:00:00');
+    Carbon::setTestNow('2024-06-15 12:00:00');
 
-        $events = Event::hasntHappenedInTheLast(2, 'weeks')->get();
+    $events = Event::hasntHappenedInTheLast(7, 'days')->get();
 
-        $this->assertCount(1, $events);
-    }
+    expect($events)->toHaveCount(1);
+    expect($events->first()->type)->toBe(TestEvent::Updated->value);
+});
 
-    public function test_happened_in_the_last_with_unit_enum(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+it('hasntHappenedInTheLast weeks', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-        Carbon::setTestNow('2024-06-15 12:00:00');
+    Carbon::setTestNow('2024-06-15 12:00:00');
 
-        // Event 3 days ago
-        Carbon::setTestNow('2024-06-12 12:00:00');
-        $model->addEvent(TestEvent::Created);
+    Carbon::setTestNow('2024-06-08 12:00:00');
+    $model->addEvent(TestEvent::Created);
 
-        // Event 10 days ago
-        Carbon::setTestNow('2024-06-05 12:00:00');
-        $model->addEvent(TestEvent::Updated);
+    Carbon::setTestNow('2024-05-25 12:00:00');
+    $model->addEvent(TestEvent::Updated);
 
-        Carbon::setTestNow('2024-06-15 12:00:00');
+    Carbon::setTestNow('2024-06-15 12:00:00');
 
-        // Using Unit enum instead of string
-        $events = Event::happenedInTheLast(7, Unit::Day)->get();
+    $events = Event::hasntHappenedInTheLast(2, 'weeks')->get();
 
-        $this->assertCount(1, $events);
-    }
+    expect($events)->toHaveCount(1);
+});
 
-    public function test_hasnt_happened_in_the_last_with_unit_enum(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+it('happenedInTheLast with Unit enum', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-        Carbon::setTestNow('2024-06-15 12:00:00');
+    Carbon::setTestNow('2024-06-15 12:00:00');
 
-        // Event 1 month ago
-        Carbon::setTestNow('2024-05-15 12:00:00');
-        $model->addEvent(TestEvent::Created);
+    Carbon::setTestNow('2024-06-12 12:00:00');
+    $model->addEvent(TestEvent::Created);
 
-        // Event 3 months ago
-        Carbon::setTestNow('2024-03-15 12:00:00');
-        $model->addEvent(TestEvent::Updated);
+    Carbon::setTestNow('2024-06-05 12:00:00');
+    $model->addEvent(TestEvent::Updated);
 
-        Carbon::setTestNow('2024-06-15 12:00:00');
+    Carbon::setTestNow('2024-06-15 12:00:00');
 
-        // Using Unit enum
-        $events = Event::hasntHappenedInTheLast(2, Unit::Month)->get();
+    $events = Event::happenedInTheLast(7, Unit::Day)->get();
 
-        $this->assertCount(1, $events);
-    }
-}
+    expect($events)->toHaveCount(1);
+});
+
+it('hasntHappenedInTheLast with Unit enum', function () {
+    $model = TestModel::create(['name' => 'Test']);
+
+    Carbon::setTestNow('2024-06-15 12:00:00');
+
+    Carbon::setTestNow('2024-05-15 12:00:00');
+    $model->addEvent(TestEvent::Created);
+
+    Carbon::setTestNow('2024-03-15 12:00:00');
+    $model->addEvent(TestEvent::Updated);
+
+    Carbon::setTestNow('2024-06-15 12:00:00');
+
+    $events = Event::hasntHappenedInTheLast(2, Unit::Month)->get();
+
+    expect($events)->toHaveCount(1);
+});

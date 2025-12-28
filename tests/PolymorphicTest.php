@@ -1,132 +1,112 @@
 <?php
 
-namespace AaronFrancis\Eventable\Tests;
-
 use AaronFrancis\Eventable\Models\Event;
 use AaronFrancis\Eventable\Tests\Fixtures\AnotherModel;
 use AaronFrancis\Eventable\Tests\Fixtures\TestEvent;
 use AaronFrancis\Eventable\Tests\Fixtures\TestModel;
 
-class PolymorphicTest extends TestCase
-{
-    public function test_events_are_scoped_to_model_type(): void
-    {
-        $testModel = TestModel::create(['name' => 'Test Model']);
-        $anotherModel = AnotherModel::create(['title' => 'Another Model']);
+it('scopes events to model type', function () {
+    $testModel = TestModel::create(['name' => 'Test Model']);
+    $anotherModel = AnotherModel::create(['title' => 'Another Model']);
 
-        $testModel->addEvent(TestEvent::Created);
-        $testModel->addEvent(TestEvent::Updated);
-        $anotherModel->addEvent(TestEvent::Created);
+    $testModel->addEvent(TestEvent::Created);
+    $testModel->addEvent(TestEvent::Updated);
+    $anotherModel->addEvent(TestEvent::Created);
 
-        $this->assertCount(2, $testModel->events);
-        $this->assertCount(1, $anotherModel->events);
-    }
+    expect($testModel->events)->toHaveCount(2);
+    expect($anotherModel->events)->toHaveCount(1);
+});
 
-    public function test_same_id_different_types_have_separate_events(): void
-    {
-        // Create models that might have the same ID
-        $testModel = TestModel::create(['name' => 'Test Model']);
-        $anotherModel = AnotherModel::create(['title' => 'Another Model']);
+it('keeps events separate for same id different types', function () {
+    $testModel = TestModel::create(['name' => 'Test Model']);
+    $anotherModel = AnotherModel::create(['title' => 'Another Model']);
 
-        // Both models have ID 1 (first of their type)
-        $this->assertEquals(1, $testModel->id);
-        $this->assertEquals(1, $anotherModel->id);
+    expect($testModel->id)->toBe(1);
+    expect($anotherModel->id)->toBe(1);
 
-        $testModel->addEvent(TestEvent::Created, ['source' => 'test']);
-        $anotherModel->addEvent(TestEvent::Created, ['source' => 'another']);
+    $testModel->addEvent(TestEvent::Created, ['source' => 'test']);
+    $anotherModel->addEvent(TestEvent::Created, ['source' => 'another']);
 
-        // Each should only see their own event
-        $this->assertCount(1, $testModel->events);
-        $this->assertCount(1, $anotherModel->events);
+    expect($testModel->events)->toHaveCount(1);
+    expect($anotherModel->events)->toHaveCount(1);
 
-        $this->assertEquals('test', $testModel->events->first()->data['source']);
-        $this->assertEquals('another', $anotherModel->events->first()->data['source']);
-    }
+    expect($testModel->events->first()->data['source'])->toBe('test');
+    expect($anotherModel->events->first()->data['source'])->toBe('another');
+});
 
-    public function test_eventable_relationship_returns_correct_model_type(): void
-    {
-        $testModel = TestModel::create(['name' => 'Test Model']);
-        $anotherModel = AnotherModel::create(['title' => 'Another Model']);
+it('returns correct model type from eventable relationship', function () {
+    $testModel = TestModel::create(['name' => 'Test Model']);
+    $anotherModel = AnotherModel::create(['title' => 'Another Model']);
 
-        $event1 = $testModel->addEvent(TestEvent::Created);
-        $event2 = $anotherModel->addEvent(TestEvent::Updated);
+    $event1 = $testModel->addEvent(TestEvent::Created);
+    $event2 = $anotherModel->addEvent(TestEvent::Updated);
 
-        $freshEvent1 = Event::find($event1->id);
-        $freshEvent2 = Event::find($event2->id);
+    $freshEvent1 = Event::find($event1->id);
+    $freshEvent2 = Event::find($event2->id);
 
-        $this->assertInstanceOf(TestModel::class, $freshEvent1->eventable);
-        $this->assertInstanceOf(AnotherModel::class, $freshEvent2->eventable);
-    }
+    expect($freshEvent1->eventable)->toBeInstanceOf(TestModel::class);
+    expect($freshEvent2->eventable)->toBeInstanceOf(AnotherModel::class);
+});
 
-    public function test_where_event_has_happened_only_queries_correct_model_type(): void
-    {
-        $testModel1 = TestModel::create(['name' => 'Test 1']);
-        $testModel2 = TestModel::create(['name' => 'Test 2']);
-        $anotherModel = AnotherModel::create(['title' => 'Another']);
+it('whereEventHasHappened only queries correct model type', function () {
+    $testModel1 = TestModel::create(['name' => 'Test 1']);
+    $testModel2 = TestModel::create(['name' => 'Test 2']);
+    $anotherModel = AnotherModel::create(['title' => 'Another']);
 
-        $testModel1->addEvent(TestEvent::Exported);
-        $anotherModel->addEvent(TestEvent::Exported);
+    $testModel1->addEvent(TestEvent::Exported);
+    $anotherModel->addEvent(TestEvent::Exported);
 
-        // Query TestModel - should only find testModel1
-        $testModels = TestModel::whereEventHasHappened(TestEvent::Exported)->get();
+    $testModels = TestModel::whereEventHasHappened(TestEvent::Exported)->get();
 
-        $this->assertCount(1, $testModels);
-        $this->assertEquals($testModel1->id, $testModels->first()->id);
+    expect($testModels)->toHaveCount(1);
+    expect($testModels->first()->id)->toBe($testModel1->id);
 
-        // Query AnotherModel - should only find anotherModel
-        $anotherModels = AnotherModel::whereEventHasHappened(TestEvent::Exported)->get();
+    $anotherModels = AnotherModel::whereEventHasHappened(TestEvent::Exported)->get();
 
-        $this->assertCount(1, $anotherModels);
-        $this->assertEquals($anotherModel->id, $anotherModels->first()->id);
-    }
+    expect($anotherModels)->toHaveCount(1);
+    expect($anotherModels->first()->id)->toBe($anotherModel->id);
+});
 
-    public function test_where_event_hasnt_happened_respects_model_type(): void
-    {
-        $testModel1 = TestModel::create(['name' => 'Test 1']);
-        $testModel2 = TestModel::create(['name' => 'Test 2']);
-        $anotherModel = AnotherModel::create(['title' => 'Another']);
+it('whereEventHasntHappened respects model type', function () {
+    $testModel1 = TestModel::create(['name' => 'Test 1']);
+    $testModel2 = TestModel::create(['name' => 'Test 2']);
+    $anotherModel = AnotherModel::create(['title' => 'Another']);
 
-        $testModel1->addEvent(TestEvent::Deleted);
-        $anotherModel->addEvent(TestEvent::Deleted);
+    $testModel1->addEvent(TestEvent::Deleted);
+    $anotherModel->addEvent(TestEvent::Deleted);
 
-        // Query TestModel - testModel2 hasn't had Deleted event
-        $testModels = TestModel::whereEventHasntHappened(TestEvent::Deleted)->get();
+    $testModels = TestModel::whereEventHasntHappened(TestEvent::Deleted)->get();
 
-        $this->assertCount(1, $testModels);
-        $this->assertEquals($testModel2->id, $testModels->first()->id);
-    }
+    expect($testModels)->toHaveCount(1);
+    expect($testModels->first()->id)->toBe($testModel2->id);
+});
 
-    public function test_can_query_all_events_across_model_types(): void
-    {
-        $testModel = TestModel::create(['name' => 'Test']);
-        $anotherModel = AnotherModel::create(['title' => 'Another']);
+it('can query all events across model types', function () {
+    $testModel = TestModel::create(['name' => 'Test']);
+    $anotherModel = AnotherModel::create(['title' => 'Another']);
 
-        $testModel->addEvent(TestEvent::Created);
-        $anotherModel->addEvent(TestEvent::Created);
-        $testModel->addEvent(TestEvent::Updated);
+    $testModel->addEvent(TestEvent::Created);
+    $anotherModel->addEvent(TestEvent::Created);
+    $testModel->addEvent(TestEvent::Updated);
 
-        // Query all events of a specific type across all models
-        $createdEvents = Event::ofType(TestEvent::Created)->get();
+    $createdEvents = Event::ofType(TestEvent::Created)->get();
 
-        $this->assertCount(2, $createdEvents);
-    }
+    expect($createdEvents)->toHaveCount(2);
+});
 
-    public function test_events_with_data_are_isolated_by_model_type(): void
-    {
-        $testModel = TestModel::create(['name' => 'Test']);
-        $anotherModel = AnotherModel::create(['title' => 'Another']);
+it('events with data are isolated by model type', function () {
+    $testModel = TestModel::create(['name' => 'Test']);
+    $anotherModel = AnotherModel::create(['title' => 'Another']);
 
-        $testModel->addEvent(TestEvent::Updated, ['field' => 'name']);
-        $anotherModel->addEvent(TestEvent::Updated, ['field' => 'title']);
+    $testModel->addEvent(TestEvent::Updated, ['field' => 'name']);
+    $anotherModel->addEvent(TestEvent::Updated, ['field' => 'title']);
 
-        $testModels = TestModel::whereEventHasHappened(TestEvent::Updated, ['field' => 'name'])->get();
-        $anotherModels = AnotherModel::whereEventHasHappened(TestEvent::Updated, ['field' => 'title'])->get();
+    $testModels = TestModel::whereEventHasHappened(TestEvent::Updated, ['field' => 'name'])->get();
+    $anotherModels = AnotherModel::whereEventHasHappened(TestEvent::Updated, ['field' => 'title'])->get();
 
-        $this->assertCount(1, $testModels);
-        $this->assertCount(1, $anotherModels);
+    expect($testModels)->toHaveCount(1);
+    expect($anotherModels)->toHaveCount(1);
 
-        // Cross-check: TestModel should not find events with 'title' field
-        $noResults = TestModel::whereEventHasHappened(TestEvent::Updated, ['field' => 'title'])->get();
-        $this->assertCount(0, $noResults);
-    }
-}
+    $noResults = TestModel::whereEventHasHappened(TestEvent::Updated, ['field' => 'title'])->get();
+    expect($noResults)->toHaveCount(0);
+});

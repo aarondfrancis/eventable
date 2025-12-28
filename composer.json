@@ -18,6 +18,7 @@
     "require-dev": {
         "laravel/pint": "^1.0",
         "orchestra/testbench": "^9.0|^10.0",
+        "pestphp/pest": "^3.0",
         "phpunit/phpunit": "^10.0|^11.0"
     },
     "autoload": {
@@ -38,5 +39,14 @@
         }
     },
     "minimum-stability": "dev",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "scripts": {
+        "test": "pest",
+        "lint": "pint"
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    }
 }

@@ -1,203 +1,186 @@
 <?php
 
-namespace AaronFrancis\Eventable\Tests;
-
 use AaronFrancis\Eventable\Tests\Fixtures\TestEvent;
 use AaronFrancis\Eventable\Tests\Fixtures\TestModel;
 use Illuminate\Support\Carbon;
 
-class HelperMethodsTest extends TestCase
-{
-    protected function tearDown(): void
-    {
-        Carbon::setTestNow();
-        parent::tearDown();
-    }
+afterEach(function () {
+    Carbon::setTestNow();
+});
 
-    /*
-    |--------------------------------------------------------------------------
-    | hasEvent() Tests
-    |--------------------------------------------------------------------------
-    */
-    public function test_has_event_returns_true_when_event_exists(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
-        $model->addEvent(TestEvent::Created);
+/*
+|--------------------------------------------------------------------------
+| hasEvent() Tests
+|--------------------------------------------------------------------------
+*/
 
-        $this->assertTrue($model->hasEvent(TestEvent::Created));
-    }
+it('hasEvent returns true when event exists', function () {
+    $model = TestModel::create(['name' => 'Test']);
+    $model->addEvent(TestEvent::Created);
 
-    public function test_has_event_returns_false_when_event_does_not_exist(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+    expect($model->hasEvent(TestEvent::Created))->toBeTrue();
+});
 
-        $this->assertFalse($model->hasEvent(TestEvent::Created));
-    }
+it('hasEvent returns false when event does not exist', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-    public function test_has_event_with_data_matching(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
-        $model->addEvent(TestEvent::Updated, ['field' => 'name']);
-        $model->addEvent(TestEvent::Updated, ['field' => 'email']);
+    expect($model->hasEvent(TestEvent::Created))->toBeFalse();
+});
 
-        $this->assertTrue($model->hasEvent(TestEvent::Updated, ['field' => 'name']));
-        $this->assertTrue($model->hasEvent(TestEvent::Updated, ['field' => 'email']));
-        $this->assertFalse($model->hasEvent(TestEvent::Updated, ['field' => 'phone']));
-    }
+it('hasEvent with data matching', function () {
+    $model = TestModel::create(['name' => 'Test']);
+    $model->addEvent(TestEvent::Updated, ['field' => 'name']);
+    $model->addEvent(TestEvent::Updated, ['field' => 'email']);
 
-    public function test_has_event_is_scoped_to_model(): void
-    {
-        $model1 = TestModel::create(['name' => 'Model 1']);
-        $model2 = TestModel::create(['name' => 'Model 2']);
+    expect($model->hasEvent(TestEvent::Updated, ['field' => 'name']))->toBeTrue();
+    expect($model->hasEvent(TestEvent::Updated, ['field' => 'email']))->toBeTrue();
+    expect($model->hasEvent(TestEvent::Updated, ['field' => 'phone']))->toBeFalse();
+});
 
-        $model1->addEvent(TestEvent::Exported);
+it('hasEvent is scoped to model', function () {
+    $model1 = TestModel::create(['name' => 'Model 1']);
+    $model2 = TestModel::create(['name' => 'Model 2']);
 
-        $this->assertTrue($model1->hasEvent(TestEvent::Exported));
-        $this->assertFalse($model2->hasEvent(TestEvent::Exported));
-    }
+    $model1->addEvent(TestEvent::Exported);
 
-    /*
-    |--------------------------------------------------------------------------
-    | latestEvent() Tests
-    |--------------------------------------------------------------------------
-    */
-    public function test_latest_event_returns_most_recent_event(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+    expect($model1->hasEvent(TestEvent::Exported))->toBeTrue();
+    expect($model2->hasEvent(TestEvent::Exported))->toBeFalse();
+});
 
-        Carbon::setTestNow('2024-01-01 10:00:00');
-        $model->addEvent(TestEvent::Created);
+/*
+|--------------------------------------------------------------------------
+| latestEvent() Tests
+|--------------------------------------------------------------------------
+*/
 
-        Carbon::setTestNow('2024-01-01 12:00:00');
-        $model->addEvent(TestEvent::Updated);
+it('latestEvent returns most recent event', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-        Carbon::setTestNow('2024-01-01 14:00:00');
-        $latest = $model->addEvent(TestEvent::Viewed);
+    Carbon::setTestNow('2024-01-01 10:00:00');
+    $model->addEvent(TestEvent::Created);
 
-        $this->assertEquals($latest->id, $model->latestEvent()->id);
-    }
+    Carbon::setTestNow('2024-01-01 12:00:00');
+    $model->addEvent(TestEvent::Updated);
 
-    public function test_latest_event_with_type_filter(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+    Carbon::setTestNow('2024-01-01 14:00:00');
+    $latest = $model->addEvent(TestEvent::Viewed);
 
-        Carbon::setTestNow('2024-01-01 10:00:00');
-        $created = $model->addEvent(TestEvent::Created);
+    expect($model->latestEvent()->id)->toBe($latest->id);
+});
 
-        Carbon::setTestNow('2024-01-01 12:00:00');
-        $model->addEvent(TestEvent::Updated);
+it('latestEvent with type filter', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-        Carbon::setTestNow('2024-01-01 14:00:00');
-        $model->addEvent(TestEvent::Viewed);
+    Carbon::setTestNow('2024-01-01 10:00:00');
+    $created = $model->addEvent(TestEvent::Created);
 
-        $latestCreated = $model->latestEvent(TestEvent::Created);
+    Carbon::setTestNow('2024-01-01 12:00:00');
+    $model->addEvent(TestEvent::Updated);
 
-        $this->assertEquals($created->id, $latestCreated->id);
-    }
+    Carbon::setTestNow('2024-01-01 14:00:00');
+    $model->addEvent(TestEvent::Viewed);
 
-    public function test_latest_event_returns_null_when_no_events(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+    $latestCreated = $model->latestEvent(TestEvent::Created);
 
-        $this->assertNull($model->latestEvent());
-        $this->assertNull($model->latestEvent(TestEvent::Created));
-    }
+    expect($latestCreated->id)->toBe($created->id);
+});
 
-    /*
-    |--------------------------------------------------------------------------
-    | firstEvent() Tests
-    |--------------------------------------------------------------------------
-    */
-    public function test_first_event_returns_oldest_event(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+it('latestEvent returns null when no events', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-        Carbon::setTestNow('2024-01-01 10:00:00');
-        $first = $model->addEvent(TestEvent::Created);
+    expect($model->latestEvent())->toBeNull();
+    expect($model->latestEvent(TestEvent::Created))->toBeNull();
+});
 
-        Carbon::setTestNow('2024-01-01 12:00:00');
-        $model->addEvent(TestEvent::Updated);
+/*
+|--------------------------------------------------------------------------
+| firstEvent() Tests
+|--------------------------------------------------------------------------
+*/
 
-        Carbon::setTestNow('2024-01-01 14:00:00');
-        $model->addEvent(TestEvent::Viewed);
+it('firstEvent returns oldest event', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-        $this->assertEquals($first->id, $model->firstEvent()->id);
-    }
+    Carbon::setTestNow('2024-01-01 10:00:00');
+    $first = $model->addEvent(TestEvent::Created);
 
-    public function test_first_event_with_type_filter(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+    Carbon::setTestNow('2024-01-01 12:00:00');
+    $model->addEvent(TestEvent::Updated);
 
-        Carbon::setTestNow('2024-01-01 10:00:00');
-        $model->addEvent(TestEvent::Created);
+    Carbon::setTestNow('2024-01-01 14:00:00');
+    $model->addEvent(TestEvent::Viewed);
 
-        Carbon::setTestNow('2024-01-01 12:00:00');
-        $firstUpdated = $model->addEvent(TestEvent::Updated);
+    expect($model->firstEvent()->id)->toBe($first->id);
+});
 
-        Carbon::setTestNow('2024-01-01 14:00:00');
-        $model->addEvent(TestEvent::Updated);
+it('firstEvent with type filter', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-        $this->assertEquals($firstUpdated->id, $model->firstEvent(TestEvent::Updated)->id);
-    }
+    Carbon::setTestNow('2024-01-01 10:00:00');
+    $model->addEvent(TestEvent::Created);
 
-    public function test_first_event_returns_null_when_no_events(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+    Carbon::setTestNow('2024-01-01 12:00:00');
+    $firstUpdated = $model->addEvent(TestEvent::Updated);
 
-        $this->assertNull($model->firstEvent());
-        $this->assertNull($model->firstEvent(TestEvent::Created));
-    }
+    Carbon::setTestNow('2024-01-01 14:00:00');
+    $model->addEvent(TestEvent::Updated);
 
-    /*
-    |--------------------------------------------------------------------------
-    | eventCount() Tests
-    |--------------------------------------------------------------------------
-    */
-    public function test_event_count_returns_total_count(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+    expect($model->firstEvent(TestEvent::Updated)->id)->toBe($firstUpdated->id);
+});
 
-        $model->addEvent(TestEvent::Created);
-        $model->addEvent(TestEvent::Updated);
-        $model->addEvent(TestEvent::Updated);
-        $model->addEvent(TestEvent::Viewed);
+it('firstEvent returns null when no events', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-        $this->assertEquals(4, $model->eventCount());
-    }
+    expect($model->firstEvent())->toBeNull();
+    expect($model->firstEvent(TestEvent::Created))->toBeNull();
+});
 
-    public function test_event_count_with_type_filter(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+/*
+|--------------------------------------------------------------------------
+| eventCount() Tests
+|--------------------------------------------------------------------------
+*/
 
-        $model->addEvent(TestEvent::Created);
-        $model->addEvent(TestEvent::Updated);
-        $model->addEvent(TestEvent::Updated);
-        $model->addEvent(TestEvent::Updated);
-        $model->addEvent(TestEvent::Viewed);
+it('eventCount returns total count', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-        $this->assertEquals(3, $model->eventCount(TestEvent::Updated));
-        $this->assertEquals(1, $model->eventCount(TestEvent::Created));
-        $this->assertEquals(0, $model->eventCount(TestEvent::Exported));
-    }
+    $model->addEvent(TestEvent::Created);
+    $model->addEvent(TestEvent::Updated);
+    $model->addEvent(TestEvent::Updated);
+    $model->addEvent(TestEvent::Viewed);
 
-    public function test_event_count_returns_zero_when_no_events(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+    expect($model->eventCount())->toBe(4);
+});
 
-        $this->assertEquals(0, $model->eventCount());
-        $this->assertEquals(0, $model->eventCount(TestEvent::Created));
-    }
+it('eventCount with type filter', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-    public function test_event_count_is_scoped_to_model(): void
-    {
-        $model1 = TestModel::create(['name' => 'Model 1']);
-        $model2 = TestModel::create(['name' => 'Model 2']);
+    $model->addEvent(TestEvent::Created);
+    $model->addEvent(TestEvent::Updated);
+    $model->addEvent(TestEvent::Updated);
+    $model->addEvent(TestEvent::Updated);
+    $model->addEvent(TestEvent::Viewed);
 
-        $model1->addEvent(TestEvent::Created);
-        $model1->addEvent(TestEvent::Updated);
-        $model2->addEvent(TestEvent::Created);
+    expect($model->eventCount(TestEvent::Updated))->toBe(3);
+    expect($model->eventCount(TestEvent::Created))->toBe(1);
+    expect($model->eventCount(TestEvent::Exported))->toBe(0);
+});
 
-        $this->assertEquals(2, $model1->eventCount());
-        $this->assertEquals(1, $model2->eventCount());
-    }
-}
+it('eventCount returns zero when no events', function () {
+    $model = TestModel::create(['name' => 'Test']);
+
+    expect($model->eventCount())->toBe(0);
+    expect($model->eventCount(TestEvent::Created))->toBe(0);
+});
+
+it('eventCount is scoped to model', function () {
+    $model1 = TestModel::create(['name' => 'Model 1']);
+    $model2 = TestModel::create(['name' => 'Model 2']);
+
+    $model1->addEvent(TestEvent::Created);
+    $model1->addEvent(TestEvent::Updated);
+    $model2->addEvent(TestEvent::Created);
+
+    expect($model1->eventCount())->toBe(2);
+    expect($model2->eventCount())->toBe(1);
+});

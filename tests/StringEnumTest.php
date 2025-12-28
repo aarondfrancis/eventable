@@ -1,92 +1,80 @@
 <?php
 
-namespace AaronFrancis\Eventable\Tests;
-
 use AaronFrancis\Eventable\Models\Event;
 use AaronFrancis\Eventable\Tests\Fixtures\StringEvent;
 use AaronFrancis\Eventable\Tests\Fixtures\TestModel;
 
-class StringEnumTest extends TestCase
-{
-    public function test_can_add_string_backed_enum_event(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+it('can add string backed enum event', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-        $event = $model->addEvent(StringEvent::UserCreated);
+    $event = $model->addEvent(StringEvent::UserCreated);
 
-        $this->assertEquals('user.created', $event->type);
-    }
+    expect($event->type)->toBe('user.created');
+});
 
-    public function test_can_add_string_backed_enum_event_with_data(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+it('can add string backed enum event with data', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-        $event = $model->addEvent(StringEvent::UserUpdated, ['field' => 'email']);
+    $event = $model->addEvent(StringEvent::UserUpdated, ['field' => 'email']);
 
-        $this->assertEquals('user.updated', $event->type);
-        $this->assertEquals(['field' => 'email'], $event->data);
-    }
+    expect($event->type)->toBe('user.updated');
+    expect($event->data)->toBe(['field' => 'email']);
+});
 
-    public function test_scope_of_type_with_string_enum(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
-        $model->addEvent(StringEvent::UserCreated);
-        $model->addEvent(StringEvent::UserUpdated);
-        $model->addEvent(StringEvent::UserDeleted);
+it('ofType scope with string enum', function () {
+    $model = TestModel::create(['name' => 'Test']);
+    $model->addEvent(StringEvent::UserCreated);
+    $model->addEvent(StringEvent::UserUpdated);
+    $model->addEvent(StringEvent::UserDeleted);
 
-        $events = Event::ofType(StringEvent::UserCreated)->get();
+    $events = Event::ofType(StringEvent::UserCreated)->get();
 
-        $this->assertCount(1, $events);
-        $this->assertEquals('user.created', $events->first()->type);
-    }
+    expect($events)->toHaveCount(1);
+    expect($events->first()->type)->toBe('user.created');
+});
 
-    public function test_scope_of_type_with_string_value(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
-        $model->addEvent(StringEvent::UserCreated);
-        $model->addEvent(StringEvent::UserUpdated);
+it('ofType scope with string value', function () {
+    $model = TestModel::create(['name' => 'Test']);
+    $model->addEvent(StringEvent::UserCreated);
+    $model->addEvent(StringEvent::UserUpdated);
 
-        $events = Event::ofType('user.updated')->get();
+    $events = Event::ofType('user.updated')->get();
 
-        $this->assertCount(1, $events);
-    }
+    expect($events)->toHaveCount(1);
+});
 
-    public function test_scope_of_type_with_array_of_string_values(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
-        $model->addEvent(StringEvent::UserCreated);
-        $model->addEvent(StringEvent::UserUpdated);
-        $model->addEvent(StringEvent::UserDeleted);
+it('ofType scope with array of string values', function () {
+    $model = TestModel::create(['name' => 'Test']);
+    $model->addEvent(StringEvent::UserCreated);
+    $model->addEvent(StringEvent::UserUpdated);
+    $model->addEvent(StringEvent::UserDeleted);
 
-        $events = Event::ofType(['user.created', 'user.deleted'])->get();
+    $events = Event::ofType(['user.created', 'user.deleted'])->get();
 
-        $this->assertCount(2, $events);
-    }
+    expect($events)->toHaveCount(2);
+});
 
-    public function test_where_event_has_happened_with_string_enum(): void
-    {
-        $model1 = TestModel::create(['name' => 'Model 1']);
-        $model2 = TestModel::create(['name' => 'Model 2']);
+it('whereEventHasHappened with string enum', function () {
+    $model1 = TestModel::create(['name' => 'Model 1']);
+    $model2 = TestModel::create(['name' => 'Model 2']);
 
-        $model1->addEvent(StringEvent::UserCreated);
-        $model2->addEvent(StringEvent::UserUpdated);
+    $model1->addEvent(StringEvent::UserCreated);
+    $model2->addEvent(StringEvent::UserUpdated);
 
-        $models = TestModel::whereEventHasHappened(StringEvent::UserCreated)->get();
+    $models = TestModel::whereEventHasHappened(StringEvent::UserCreated)->get();
 
-        $this->assertCount(1, $models);
-        $this->assertEquals($model1->id, $models->first()->id);
-    }
+    expect($models)->toHaveCount(1);
+    expect($models->first()->id)->toBe($model1->id);
+});
 
-    public function test_where_event_hasnt_happened_with_string_enum(): void
-    {
-        $model1 = TestModel::create(['name' => 'Model 1']);
-        $model2 = TestModel::create(['name' => 'Model 2']);
-        $model3 = TestModel::create(['name' => 'Model 3']);
+it('whereEventHasntHappened with string enum', function () {
+    $model1 = TestModel::create(['name' => 'Model 1']);
+    $model2 = TestModel::create(['name' => 'Model 2']);
+    $model3 = TestModel::create(['name' => 'Model 3']);
 
-        $model1->addEvent(StringEvent::UserDeleted);
+    $model1->addEvent(StringEvent::UserDeleted);
 
-        $models = TestModel::whereEventHasntHappened(StringEvent::UserDeleted)->get();
+    $models = TestModel::whereEventHasntHappened(StringEvent::UserDeleted)->get();
 
-        $this->assertCount(2, $models);
-    }
-}
+    expect($models)->toHaveCount(2);
+});

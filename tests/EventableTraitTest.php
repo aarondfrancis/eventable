@@ -1,122 +1,108 @@
 <?php
 
-namespace AaronFrancis\Eventable\Tests;
-
 use AaronFrancis\Eventable\Models\Event;
 use AaronFrancis\Eventable\Tests\Fixtures\TestEvent;
 use AaronFrancis\Eventable\Tests\Fixtures\TestModel;
 
-class EventableTraitTest extends TestCase
-{
-    public function test_can_add_event_to_model(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+it('can add event to model', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-        $event = $model->addEvent(TestEvent::Created);
+    $event = $model->addEvent(TestEvent::Created);
 
-        $this->assertInstanceOf(Event::class, $event);
-        $this->assertEquals(TestEvent::Created->value, $event->type);
-        $this->assertEquals($model->id, $event->eventable_id);
-        $this->assertEquals(TestModel::class, $event->eventable_type);
-    }
+    expect($event)->toBeInstanceOf(Event::class);
+    expect($event->type)->toBe(TestEvent::Created->value);
+    expect($event->eventable_id)->toBe($model->id);
+    expect($event->eventable_type)->toBe(TestModel::class);
+});
 
-    public function test_can_add_event_with_data(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+it('can add event with data', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-        $event = $model->addEvent(TestEvent::Updated, ['field' => 'name', 'old' => 'Old', 'new' => 'New']);
+    $event = $model->addEvent(TestEvent::Updated, ['field' => 'name', 'old' => 'Old', 'new' => 'New']);
 
-        $this->assertEquals(['field' => 'name', 'old' => 'Old', 'new' => 'New'], $event->data);
-    }
+    expect($event->data)->toBe(['field' => 'name', 'old' => 'Old', 'new' => 'New']);
+});
 
-    public function test_can_add_event_with_null_data(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+it('can add event with null data', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-        $event = $model->addEvent(TestEvent::Viewed);
+    $event = $model->addEvent(TestEvent::Viewed);
 
-        $this->assertNull($event->data);
-    }
+    expect($event->data)->toBeNull();
+});
 
-    public function test_events_relationship_returns_all_events(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
+it('returns all events via relationship', function () {
+    $model = TestModel::create(['name' => 'Test']);
 
-        $model->addEvent(TestEvent::Created);
-        $model->addEvent(TestEvent::Updated);
-        $model->addEvent(TestEvent::Viewed);
+    $model->addEvent(TestEvent::Created);
+    $model->addEvent(TestEvent::Updated);
+    $model->addEvent(TestEvent::Viewed);
 
-        $this->assertCount(3, $model->events);
-    }
+    expect($model->events)->toHaveCount(3);
+});
 
-    public function test_events_are_scoped_to_model(): void
-    {
-        $model1 = TestModel::create(['name' => 'Model 1']);
-        $model2 = TestModel::create(['name' => 'Model 2']);
+it('scopes events to model', function () {
+    $model1 = TestModel::create(['name' => 'Model 1']);
+    $model2 = TestModel::create(['name' => 'Model 2']);
 
-        $model1->addEvent(TestEvent::Created);
-        $model1->addEvent(TestEvent::Updated);
-        $model2->addEvent(TestEvent::Created);
+    $model1->addEvent(TestEvent::Created);
+    $model1->addEvent(TestEvent::Updated);
+    $model2->addEvent(TestEvent::Created);
 
-        $this->assertCount(2, $model1->events);
-        $this->assertCount(1, $model2->events);
-    }
+    expect($model1->events)->toHaveCount(2);
+    expect($model2->events)->toHaveCount(1);
+});
 
-    public function test_where_event_has_happened_scope(): void
-    {
-        $model1 = TestModel::create(['name' => 'Model 1']);
-        $model2 = TestModel::create(['name' => 'Model 2']);
-        $model3 = TestModel::create(['name' => 'Model 3']);
+it('filters with whereEventHasHappened scope', function () {
+    $model1 = TestModel::create(['name' => 'Model 1']);
+    $model2 = TestModel::create(['name' => 'Model 2']);
+    $model3 = TestModel::create(['name' => 'Model 3']);
 
-        $model1->addEvent(TestEvent::Exported);
-        $model2->addEvent(TestEvent::Viewed);
+    $model1->addEvent(TestEvent::Exported);
+    $model2->addEvent(TestEvent::Viewed);
 
-        $exported = TestModel::whereEventHasHappened(TestEvent::Exported)->get();
+    $exported = TestModel::whereEventHasHappened(TestEvent::Exported)->get();
 
-        $this->assertCount(1, $exported);
-        $this->assertEquals($model1->id, $exported->first()->id);
-    }
+    expect($exported)->toHaveCount(1);
+    expect($exported->first()->id)->toBe($model1->id);
+});
 
-    public function test_where_event_hasnt_happened_scope(): void
-    {
-        $model1 = TestModel::create(['name' => 'Model 1']);
-        $model2 = TestModel::create(['name' => 'Model 2']);
-        $model3 = TestModel::create(['name' => 'Model 3']);
+it('filters with whereEventHasntHappened scope', function () {
+    $model1 = TestModel::create(['name' => 'Model 1']);
+    $model2 = TestModel::create(['name' => 'Model 2']);
+    $model3 = TestModel::create(['name' => 'Model 3']);
 
-        $model1->addEvent(TestEvent::Exported);
+    $model1->addEvent(TestEvent::Exported);
 
-        $notExported = TestModel::whereEventHasntHappened(TestEvent::Exported)->get();
+    $notExported = TestModel::whereEventHasntHappened(TestEvent::Exported)->get();
 
-        $this->assertCount(2, $notExported);
-        $this->assertFalse($notExported->contains('id', $model1->id));
-    }
+    expect($notExported)->toHaveCount(2);
+    expect($notExported->contains('id', $model1->id))->toBeFalse();
+});
 
-    public function test_where_event_has_happened_with_data(): void
-    {
-        $model1 = TestModel::create(['name' => 'Model 1']);
-        $model2 = TestModel::create(['name' => 'Model 2']);
+it('filters whereEventHasHappened with data', function () {
+    $model1 = TestModel::create(['name' => 'Model 1']);
+    $model2 = TestModel::create(['name' => 'Model 2']);
 
-        $model1->addEvent(TestEvent::Updated, ['field' => 'name']);
-        $model2->addEvent(TestEvent::Updated, ['field' => 'email']);
+    $model1->addEvent(TestEvent::Updated, ['field' => 'name']);
+    $model2->addEvent(TestEvent::Updated, ['field' => 'email']);
 
-        $nameUpdated = TestModel::whereEventHasHappened(TestEvent::Updated, ['field' => 'name'])->get();
+    $nameUpdated = TestModel::whereEventHasHappened(TestEvent::Updated, ['field' => 'name'])->get();
 
-        $this->assertCount(1, $nameUpdated);
-        $this->assertEquals($model1->id, $nameUpdated->first()->id);
-    }
+    expect($nameUpdated)->toHaveCount(1);
+    expect($nameUpdated->first()->id)->toBe($model1->id);
+});
 
-    public function test_where_event_hasnt_happened_with_data(): void
-    {
-        $model1 = TestModel::create(['name' => 'Model 1']);
-        $model2 = TestModel::create(['name' => 'Model 2']);
-        $model3 = TestModel::create(['name' => 'Model 3']);
+it('filters whereEventHasntHappened with data', function () {
+    $model1 = TestModel::create(['name' => 'Model 1']);
+    $model2 = TestModel::create(['name' => 'Model 2']);
+    $model3 = TestModel::create(['name' => 'Model 3']);
 
-        $model1->addEvent(TestEvent::Updated, ['field' => 'name']);
-        $model2->addEvent(TestEvent::Updated, ['field' => 'email']);
+    $model1->addEvent(TestEvent::Updated, ['field' => 'name']);
+    $model2->addEvent(TestEvent::Updated, ['field' => 'email']);
 
-        $notNameUpdated = TestModel::whereEventHasntHappened(TestEvent::Updated, ['field' => 'name'])->get();
+    $notNameUpdated = TestModel::whereEventHasntHappened(TestEvent::Updated, ['field' => 'name'])->get();
 
-        $this->assertCount(2, $notNameUpdated);
-        $this->assertFalse($notNameUpdated->contains('id', $model1->id));
-    }
-}
+    expect($notNameUpdated)->toHaveCount(2);
+    expect($notNameUpdated->contains('id', $model1->id))->toBeFalse();
+});

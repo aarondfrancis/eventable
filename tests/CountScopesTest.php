@@ -1,233 +1,217 @@
 <?php
 
-namespace AaronFrancis\Eventable\Tests;
-
 use AaronFrancis\Eventable\Tests\Fixtures\TestEvent;
 use AaronFrancis\Eventable\Tests\Fixtures\TestModel;
 use Illuminate\Support\Carbon;
 
-class CountScopesTest extends TestCase
-{
-    protected function tearDown(): void
-    {
-        Carbon::setTestNow();
-        parent::tearDown();
+afterEach(function () {
+    Carbon::setTestNow();
+});
+
+/*
+|--------------------------------------------------------------------------
+| whereEventHasHappenedTimes() Tests
+|--------------------------------------------------------------------------
+*/
+
+it('whereEventHasHappenedTimes exact match', function () {
+    $model1 = TestModel::create(['name' => 'Model 1']);
+    $model2 = TestModel::create(['name' => 'Model 2']);
+    $model3 = TestModel::create(['name' => 'Model 3']);
+
+    // Model 1: 3 views
+    $model1->addEvent(TestEvent::Viewed);
+    $model1->addEvent(TestEvent::Viewed);
+    $model1->addEvent(TestEvent::Viewed);
+
+    // Model 2: 2 views
+    $model2->addEvent(TestEvent::Viewed);
+    $model2->addEvent(TestEvent::Viewed);
+
+    // Model 3: 3 views
+    $model3->addEvent(TestEvent::Viewed);
+    $model3->addEvent(TestEvent::Viewed);
+    $model3->addEvent(TestEvent::Viewed);
+
+    $modelsWithExactly3 = TestModel::whereEventHasHappenedTimes(TestEvent::Viewed, 3)->get();
+
+    expect($modelsWithExactly3)->toHaveCount(2);
+    expect($modelsWithExactly3->contains('id', $model1->id))->toBeTrue();
+    expect($modelsWithExactly3->contains('id', $model3->id))->toBeTrue();
+});
+
+it('whereEventHasHappenedTimes zero', function () {
+    $model1 = TestModel::create(['name' => 'Model 1']);
+    $model2 = TestModel::create(['name' => 'Model 2']);
+
+    $model1->addEvent(TestEvent::Viewed);
+
+    $modelsWithZero = TestModel::whereEventHasHappenedTimes(TestEvent::Viewed, 0)->get();
+
+    expect($modelsWithZero)->toHaveCount(1);
+    expect($modelsWithZero->first()->id)->toBe($model2->id);
+});
+
+it('whereEventHasHappenedTimes with data', function () {
+    $model1 = TestModel::create(['name' => 'Model 1']);
+    $model2 = TestModel::create(['name' => 'Model 2']);
+
+    // Model 1: 2 name updates
+    $model1->addEvent(TestEvent::Updated, ['field' => 'name']);
+    $model1->addEvent(TestEvent::Updated, ['field' => 'name']);
+    $model1->addEvent(TestEvent::Updated, ['field' => 'email']);
+
+    // Model 2: 1 name update
+    $model2->addEvent(TestEvent::Updated, ['field' => 'name']);
+
+    $modelsWithExactly2NameUpdates = TestModel::whereEventHasHappenedTimes(
+        TestEvent::Updated,
+        2,
+        ['field' => 'name']
+    )->get();
+
+    expect($modelsWithExactly2NameUpdates)->toHaveCount(1);
+    expect($modelsWithExactly2NameUpdates->first()->id)->toBe($model1->id);
+});
+
+/*
+|--------------------------------------------------------------------------
+| whereEventHasHappenedAtLeast() Tests
+|--------------------------------------------------------------------------
+*/
+
+it('whereEventHasHappenedAtLeast', function () {
+    $model1 = TestModel::create(['name' => 'Model 1']);
+    $model2 = TestModel::create(['name' => 'Model 2']);
+    $model3 = TestModel::create(['name' => 'Model 3']);
+
+    // Model 1: 5 views
+    for ($i = 0; $i < 5; $i++) {
+        $model1->addEvent(TestEvent::Viewed);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | whereEventHasHappenedTimes() Tests
-    |--------------------------------------------------------------------------
-    */
-    public function test_where_event_has_happened_times_exact_match(): void
-    {
-        $model1 = TestModel::create(['name' => 'Model 1']);
-        $model2 = TestModel::create(['name' => 'Model 2']);
-        $model3 = TestModel::create(['name' => 'Model 3']);
+    // Model 2: 2 views
+    $model2->addEvent(TestEvent::Viewed);
+    $model2->addEvent(TestEvent::Viewed);
 
-        // Model 1: 3 views
-        $model1->addEvent(TestEvent::Viewed);
-        $model1->addEvent(TestEvent::Viewed);
-        $model1->addEvent(TestEvent::Viewed);
-
-        // Model 2: 2 views
-        $model2->addEvent(TestEvent::Viewed);
-        $model2->addEvent(TestEvent::Viewed);
-
-        // Model 3: 3 views
+    // Model 3: 3 views
+    for ($i = 0; $i < 3; $i++) {
         $model3->addEvent(TestEvent::Viewed);
-        $model3->addEvent(TestEvent::Viewed);
-        $model3->addEvent(TestEvent::Viewed);
-
-        $modelsWithExactly3 = TestModel::whereEventHasHappenedTimes(TestEvent::Viewed, 3)->get();
-
-        $this->assertCount(2, $modelsWithExactly3);
-        $this->assertTrue($modelsWithExactly3->contains('id', $model1->id));
-        $this->assertTrue($modelsWithExactly3->contains('id', $model3->id));
     }
 
-    public function test_where_event_has_happened_times_zero(): void
-    {
-        $model1 = TestModel::create(['name' => 'Model 1']);
-        $model2 = TestModel::create(['name' => 'Model 2']);
+    $modelsWithAtLeast3 = TestModel::whereEventHasHappenedAtLeast(TestEvent::Viewed, 3)->get();
 
-        $model1->addEvent(TestEvent::Viewed);
+    expect($modelsWithAtLeast3)->toHaveCount(2);
+    expect($modelsWithAtLeast3->contains('id', $model1->id))->toBeTrue();
+    expect($modelsWithAtLeast3->contains('id', $model3->id))->toBeTrue();
+});
 
-        // Models with exactly 0 views should be model2
-        $modelsWithZero = TestModel::whereEventHasHappenedTimes(TestEvent::Viewed, 0)->get();
+it('whereEventHasHappenedAtLeast one', function () {
+    $model1 = TestModel::create(['name' => 'Model 1']);
+    $model2 = TestModel::create(['name' => 'Model 2']);
+    $model3 = TestModel::create(['name' => 'Model 3']);
 
-        $this->assertCount(1, $modelsWithZero);
-        $this->assertEquals($model2->id, $modelsWithZero->first()->id);
-    }
+    $model1->addEvent(TestEvent::Exported);
+    $model3->addEvent(TestEvent::Exported);
+    $model3->addEvent(TestEvent::Exported);
 
-    public function test_where_event_has_happened_times_with_data(): void
-    {
-        $model1 = TestModel::create(['name' => 'Model 1']);
-        $model2 = TestModel::create(['name' => 'Model 2']);
+    $modelsWithAtLeast1 = TestModel::whereEventHasHappenedAtLeast(TestEvent::Exported, 1)->get();
 
-        // Model 1: 2 name updates
-        $model1->addEvent(TestEvent::Updated, ['field' => 'name']);
-        $model1->addEvent(TestEvent::Updated, ['field' => 'name']);
-        $model1->addEvent(TestEvent::Updated, ['field' => 'email']);
+    expect($modelsWithAtLeast1)->toHaveCount(2);
+    expect($modelsWithAtLeast1->contains('id', $model1->id))->toBeTrue();
+    expect($modelsWithAtLeast1->contains('id', $model3->id))->toBeTrue();
+});
 
-        // Model 2: 1 name update
-        $model2->addEvent(TestEvent::Updated, ['field' => 'name']);
+it('whereEventHasHappenedAtLeast with data', function () {
+    $model1 = TestModel::create(['name' => 'Model 1']);
+    $model2 = TestModel::create(['name' => 'Model 2']);
 
-        $modelsWithExactly2NameUpdates = TestModel::whereEventHasHappenedTimes(
-            TestEvent::Updated,
-            2,
-            ['field' => 'name']
-        )->get();
+    // Model 1: 3 USD orders
+    $model1->addEvent(TestEvent::Updated, ['currency' => 'USD']);
+    $model1->addEvent(TestEvent::Updated, ['currency' => 'USD']);
+    $model1->addEvent(TestEvent::Updated, ['currency' => 'USD']);
+    $model1->addEvent(TestEvent::Updated, ['currency' => 'EUR']);
 
-        $this->assertCount(1, $modelsWithExactly2NameUpdates);
-        $this->assertEquals($model1->id, $modelsWithExactly2NameUpdates->first()->id);
-    }
+    // Model 2: 1 USD order
+    $model2->addEvent(TestEvent::Updated, ['currency' => 'USD']);
 
-    /*
-    |--------------------------------------------------------------------------
-    | whereEventHasHappenedAtLeast() Tests
-    |--------------------------------------------------------------------------
-    */
-    public function test_where_event_has_happened_at_least(): void
-    {
-        $model1 = TestModel::create(['name' => 'Model 1']);
-        $model2 = TestModel::create(['name' => 'Model 2']);
-        $model3 = TestModel::create(['name' => 'Model 3']);
+    $modelsWithAtLeast2UsdOrders = TestModel::whereEventHasHappenedAtLeast(
+        TestEvent::Updated,
+        2,
+        ['currency' => 'USD']
+    )->get();
 
-        // Model 1: 5 views
-        for ($i = 0; $i < 5; $i++) {
-            $model1->addEvent(TestEvent::Viewed);
-        }
+    expect($modelsWithAtLeast2UsdOrders)->toHaveCount(1);
+    expect($modelsWithAtLeast2UsdOrders->first()->id)->toBe($model1->id);
+});
 
-        // Model 2: 2 views
-        $model2->addEvent(TestEvent::Viewed);
-        $model2->addEvent(TestEvent::Viewed);
+/*
+|--------------------------------------------------------------------------
+| whereLatestEventIs() Tests
+|--------------------------------------------------------------------------
+*/
 
-        // Model 3: 3 views
-        for ($i = 0; $i < 3; $i++) {
-            $model3->addEvent(TestEvent::Viewed);
-        }
+it('whereLatestEventIs', function () {
+    $model1 = TestModel::create(['name' => 'Model 1']);
+    $model2 = TestModel::create(['name' => 'Model 2']);
+    $model3 = TestModel::create(['name' => 'Model 3']);
 
-        $modelsWithAtLeast3 = TestModel::whereEventHasHappenedAtLeast(TestEvent::Viewed, 3)->get();
+    Carbon::setTestNow('2024-01-01 10:00:00');
+    $model1->addEvent(TestEvent::Created);
+    $model2->addEvent(TestEvent::Created);
+    $model3->addEvent(TestEvent::Created);
 
-        $this->assertCount(2, $modelsWithAtLeast3);
-        $this->assertTrue($modelsWithAtLeast3->contains('id', $model1->id));
-        $this->assertTrue($modelsWithAtLeast3->contains('id', $model3->id));
-    }
+    Carbon::setTestNow('2024-01-01 12:00:00');
+    $model1->addEvent(TestEvent::Updated);
+    $model2->addEvent(TestEvent::Viewed);
+    // Model 3's latest is still Created
 
-    public function test_where_event_has_happened_at_least_one(): void
-    {
-        $model1 = TestModel::create(['name' => 'Model 1']);
-        $model2 = TestModel::create(['name' => 'Model 2']);
-        $model3 = TestModel::create(['name' => 'Model 3']);
+    $modelsWhereLatestIsUpdated = TestModel::whereLatestEventIs(TestEvent::Updated)->get();
 
-        $model1->addEvent(TestEvent::Exported);
-        $model3->addEvent(TestEvent::Exported);
-        $model3->addEvent(TestEvent::Exported);
+    expect($modelsWhereLatestIsUpdated)->toHaveCount(1);
+    expect($modelsWhereLatestIsUpdated->first()->id)->toBe($model1->id);
+});
 
-        $modelsWithAtLeast1 = TestModel::whereEventHasHappenedAtLeast(TestEvent::Exported, 1)->get();
+it('whereLatestEventIs with multiple matches', function () {
+    $model1 = TestModel::create(['name' => 'Model 1']);
+    $model2 = TestModel::create(['name' => 'Model 2']);
+    $model3 = TestModel::create(['name' => 'Model 3']);
 
-        $this->assertCount(2, $modelsWithAtLeast1);
-        $this->assertTrue($modelsWithAtLeast1->contains('id', $model1->id));
-        $this->assertTrue($modelsWithAtLeast1->contains('id', $model3->id));
-    }
+    Carbon::setTestNow('2024-01-01 10:00:00');
+    $model1->addEvent(TestEvent::Created);
+    $model2->addEvent(TestEvent::Updated);
+    $model3->addEvent(TestEvent::Created);
 
-    public function test_where_event_has_happened_at_least_with_data(): void
-    {
-        $model1 = TestModel::create(['name' => 'Model 1']);
-        $model2 = TestModel::create(['name' => 'Model 2']);
+    Carbon::setTestNow('2024-01-01 12:00:00');
+    $model1->addEvent(TestEvent::Viewed);
+    $model3->addEvent(TestEvent::Viewed);
 
-        // Model 1: 3 USD orders
-        $model1->addEvent(TestEvent::Updated, ['currency' => 'USD']);
-        $model1->addEvent(TestEvent::Updated, ['currency' => 'USD']);
-        $model1->addEvent(TestEvent::Updated, ['currency' => 'USD']);
-        $model1->addEvent(TestEvent::Updated, ['currency' => 'EUR']);
+    $modelsWhereLatestIsViewed = TestModel::whereLatestEventIs(TestEvent::Viewed)->get();
 
-        // Model 2: 1 USD order
-        $model2->addEvent(TestEvent::Updated, ['currency' => 'USD']);
+    expect($modelsWhereLatestIsViewed)->toHaveCount(2);
+    expect($modelsWhereLatestIsViewed->contains('id', $model1->id))->toBeTrue();
+    expect($modelsWhereLatestIsViewed->contains('id', $model3->id))->toBeTrue();
+});
 
-        $modelsWithAtLeast2UsdOrders = TestModel::whereEventHasHappenedAtLeast(
-            TestEvent::Updated,
-            2,
-            ['currency' => 'USD']
-        )->get();
+it('whereLatestEventIs excludes models without events', function () {
+    $model1 = TestModel::create(['name' => 'Model 1']);
+    $model2 = TestModel::create(['name' => 'Model 2']);
 
-        $this->assertCount(1, $modelsWithAtLeast2UsdOrders);
-        $this->assertEquals($model1->id, $modelsWithAtLeast2UsdOrders->first()->id);
-    }
+    $model1->addEvent(TestEvent::Created);
+    // Model 2 has no events
 
-    /*
-    |--------------------------------------------------------------------------
-    | whereLatestEventIs() Tests
-    |--------------------------------------------------------------------------
-    */
-    public function test_where_latest_event_is(): void
-    {
-        $model1 = TestModel::create(['name' => 'Model 1']);
-        $model2 = TestModel::create(['name' => 'Model 2']);
-        $model3 = TestModel::create(['name' => 'Model 3']);
+    $modelsWhereLatestIsCreated = TestModel::whereLatestEventIs(TestEvent::Created)->get();
 
-        Carbon::setTestNow('2024-01-01 10:00:00');
-        $model1->addEvent(TestEvent::Created);
-        $model2->addEvent(TestEvent::Created);
-        $model3->addEvent(TestEvent::Created);
+    expect($modelsWhereLatestIsCreated)->toHaveCount(1);
+    expect($modelsWhereLatestIsCreated->first()->id)->toBe($model1->id);
+});
 
-        Carbon::setTestNow('2024-01-01 12:00:00');
-        $model1->addEvent(TestEvent::Updated);
-        $model2->addEvent(TestEvent::Viewed);
-        // Model 3's latest is still Created
+it('whereLatestEventIs single event', function () {
+    $model = TestModel::create(['name' => 'Test']);
+    $model->addEvent(TestEvent::Exported);
 
-        $modelsWhereLatestIsUpdated = TestModel::whereLatestEventIs(TestEvent::Updated)->get();
+    $models = TestModel::whereLatestEventIs(TestEvent::Exported)->get();
 
-        $this->assertCount(1, $modelsWhereLatestIsUpdated);
-        $this->assertEquals($model1->id, $modelsWhereLatestIsUpdated->first()->id);
-    }
-
-    public function test_where_latest_event_is_with_multiple_matches(): void
-    {
-        $model1 = TestModel::create(['name' => 'Model 1']);
-        $model2 = TestModel::create(['name' => 'Model 2']);
-        $model3 = TestModel::create(['name' => 'Model 3']);
-
-        Carbon::setTestNow('2024-01-01 10:00:00');
-        $model1->addEvent(TestEvent::Created);
-        $model2->addEvent(TestEvent::Updated);
-        $model3->addEvent(TestEvent::Created);
-
-        Carbon::setTestNow('2024-01-01 12:00:00');
-        $model1->addEvent(TestEvent::Viewed);
-        $model3->addEvent(TestEvent::Viewed);
-
-        // Models 1 and 3 have Viewed as their latest event
-        $modelsWhereLatestIsViewed = TestModel::whereLatestEventIs(TestEvent::Viewed)->get();
-
-        $this->assertCount(2, $modelsWhereLatestIsViewed);
-        $this->assertTrue($modelsWhereLatestIsViewed->contains('id', $model1->id));
-        $this->assertTrue($modelsWhereLatestIsViewed->contains('id', $model3->id));
-    }
-
-    public function test_where_latest_event_is_excludes_models_without_events(): void
-    {
-        $model1 = TestModel::create(['name' => 'Model 1']);
-        $model2 = TestModel::create(['name' => 'Model 2']);
-
-        $model1->addEvent(TestEvent::Created);
-        // Model 2 has no events
-
-        $modelsWhereLatestIsCreated = TestModel::whereLatestEventIs(TestEvent::Created)->get();
-
-        $this->assertCount(1, $modelsWhereLatestIsCreated);
-        $this->assertEquals($model1->id, $modelsWhereLatestIsCreated->first()->id);
-    }
-
-    public function test_where_latest_event_is_single_event(): void
-    {
-        $model = TestModel::create(['name' => 'Test']);
-        $model->addEvent(TestEvent::Exported);
-
-        $models = TestModel::whereLatestEventIs(TestEvent::Exported)->get();
-
-        $this->assertCount(1, $models);
-        $this->assertEquals($model->id, $models->first()->id);
-    }
-}
+    expect($models)->toHaveCount(1);
+    expect($models->first()->id)->toBe($model->id);
+});

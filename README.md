@@ -1,5 +1,11 @@
 # Eventable
 
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/aaronfrancis/eventable.svg?style=flat-square)](https://packagist.org/packages/aaronfrancis/eventable)
+[![Tests](https://github.com/aarondfrancis/eventable/actions/workflows/tests.yaml/badge.svg)](https://github.com/aarondfrancis/eventable/actions/workflows/tests.yaml)
+[![Total Downloads](https://img.shields.io/packagist/dt/aaronfrancis/eventable.svg?style=flat-square)](https://packagist.org/packages/aaronfrancis/eventable)
+[![PHP Version](https://img.shields.io/packagist/php-v/aaronfrancis/eventable.svg?style=flat-square)](https://packagist.org/packages/aaronfrancis/eventable)
+[![License](https://img.shields.io/packagist/l/aaronfrancis/eventable.svg?style=flat-square)](https://packagist.org/packages/aaronfrancis/eventable)
+
 A Laravel package for tracking events on Eloquent models using polymorphic relationships.
 
 ```php
