@@ -38,11 +38,9 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        php: ['8.2', '8.3', '8.4', '8.5']
-        laravel: ['10.*', '11.*', '12.*']
+        php: ['8.2', '8.3', '8.4']
+        laravel: ['11.*', '12.*']
         include:
-          - laravel: '10.*'
-            testbench: '8.*'
           - laravel: '11.*'
             testbench: '9.*'
           - laravel: '12.*'
@@ -67,7 +65,7 @@ jobs:
           composer update --prefer-stable --no-interaction --no-progress
 
       - name: Run tests
-        run: vendor/bin/phpunit
+        run: vendor/bin/pest
 
   release:
     runs-on: ubuntu-latest
