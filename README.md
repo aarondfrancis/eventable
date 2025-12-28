@@ -72,6 +72,20 @@ This registration is required and enables:
 - Multiple enums without value collisions (e.g., both `UserEvent::Created = 1` and `OrderEvent::Created = 1`)
 - Refactoring class names without breaking existing data
 
+**4. (Recommended) Enforce a morph map:**
+
+Since Eventable uses polymorphic relationships, we highly recommend using Laravel's [Enforced Morph Map](https://laravel.com/docs/eloquent-relationships#custom-polymorphic-types) to avoid storing full class names in the database:
+
+```php
+// In AppServiceProvider::boot()
+use Illuminate\Database\Eloquent\Relations\Relation;
+
+Relation::enforceMorphMap([
+    'user' => \App\Models\User::class,
+    'order' => \App\Models\Order::class,
+]);
+```
+
 That's it! You're ready to start tracking events.
 
 ## Usage
