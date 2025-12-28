@@ -99,9 +99,9 @@ trait Eventable
         $query->whereHas('events', function ($events) use ($event, $table) {
             $events->where('id', function ($sub) use ($table) {
                 $sub->selectRaw('MAX(id)')
-                    ->from($table . ' as e2')
-                    ->whereColumn('e2.eventable_id', $table . '.eventable_id')
-                    ->whereColumn('e2.eventable_type', $table . '.eventable_type');
+                    ->from($table.' as e2')
+                    ->whereColumn('e2.eventable_id', $table.'.eventable_id')
+                    ->whereColumn('e2.eventable_type', $table.'.eventable_type');
             })->where('type', $event->value);
         });
     }

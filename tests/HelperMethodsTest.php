@@ -2,7 +2,6 @@
 
 namespace AaronFrancis\Eventable\Tests;
 
-use AaronFrancis\Eventable\Models\Event;
 use AaronFrancis\Eventable\Tests\Fixtures\TestEvent;
 use AaronFrancis\Eventable\Tests\Fixtures\TestModel;
 use Illuminate\Support\Carbon;
