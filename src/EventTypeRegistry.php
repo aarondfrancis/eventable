@@ -17,7 +17,6 @@ class EventTypeRegistry
     /**
      * Register an event type with an alias.
      *
-     * @param  string  $alias
      * @param  class-string<BackedEnum>  $enumClass
      */
     public static function register(string $alias, string $enumClass): void
@@ -49,7 +48,6 @@ class EventTypeRegistry
      * Get the alias for an enum class.
      *
      * @param  class-string<BackedEnum>|BackedEnum  $enum
-     * @return string
      *
      * @throws InvalidArgumentException
      */
@@ -72,7 +70,6 @@ class EventTypeRegistry
     /**
      * Get the enum class for an alias.
      *
-     * @param  string  $alias
      * @return class-string<BackedEnum>
      *
      * @throws InvalidArgumentException
@@ -94,7 +91,6 @@ class EventTypeRegistry
      * Check if an enum class is registered.
      *
      * @param  class-string<BackedEnum>|BackedEnum  $enum
-     * @return bool
      */
     public static function isRegistered(string|BackedEnum $enum): bool
     {
@@ -105,9 +101,6 @@ class EventTypeRegistry
 
     /**
      * Check if an alias is registered.
-     *
-     * @param  string  $alias
-     * @return bool
      */
     public static function hasAlias(string $alias): bool
     {
