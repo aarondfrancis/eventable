@@ -13,36 +13,26 @@ permissions:
   contents: write
 
 jobs:
-  pint:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.2'
-          coverage: none
-
-      - name: Install dependencies
-        run: composer install --no-interaction --no-progress
-
-      - name: Check code style
-        run: vendor/bin/pint --test
-
   tests:
     uses: ./.github/workflows/tests.yaml
 
+  pint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+      - run: composer install --no-interaction --prefer-dist
+      - run: vendor/bin/pint --test
+
   release:
     runs-on: ubuntu-latest
-    needs: [pint, tests]
+    needs: [tests, pint]
     if: github.actor == 'aarondfrancis'
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
