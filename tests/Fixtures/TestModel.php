@@ -2,12 +2,12 @@
 
 namespace AaronFrancis\Eventable\Tests\Fixtures;
 
-use AaronFrancis\Eventable\Concerns\HasEvents;
+use AaronFrancis\Eventable\Concerns\Eventable;
 use Illuminate\Database\Eloquent\Model;
 
 class TestModel extends Model
 {
-    use HasEvents;
+    use Eventable;
 
     protected $table = 'test_models';
 

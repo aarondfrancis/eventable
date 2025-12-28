@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Event tracking for Eloquent models using polymorphic relationships
-- `HasEvents` trait for models to record and query events
+- `Eventable` trait for models to record and query events
 - Configurable Event model with JSON data storage
 - Event enum support for type-safe event definitions
 - Query scopes for filtering events by type, data, and time range

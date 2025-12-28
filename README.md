@@ -64,12 +64,12 @@ return [
 
 namespace App\Models;
 
-use AaronFrancis\Eventable\Concerns\HasEvents;
+use AaronFrancis\Eventable\Concerns\Eventable;
 use Illuminate\Database\Eloquent\Model;
 
 class User extends Model
 {
-    use HasEvents;
+    use Eventable;
 }
 ```
 

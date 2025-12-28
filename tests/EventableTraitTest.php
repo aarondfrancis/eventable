@@ -6,7 +6,7 @@ use AaronFrancis\Eventable\Models\Event;
 use AaronFrancis\Eventable\Tests\Fixtures\TestEvent;
 use AaronFrancis\Eventable\Tests\Fixtures\TestModel;
 
-class HasEventsTest extends TestCase
+class EventableTraitTest extends TestCase
 {
     public function test_can_add_event_to_model(): void
     {
