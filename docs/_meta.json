@@ -8,6 +8,7 @@
         { "slug": "usage", "title": "Usage" },
         { "slug": "querying", "title": "Querying Events" },
         { "slug": "pruning", "title": "Pruning Events" },
-        { "slug": "api-reference", "title": "API Reference" }
+        { "slug": "api-reference", "title": "API Reference" },
+        { "slug": "troubleshooting", "title": "Troubleshooting" }
     ]
 }

@@ -26,12 +26,21 @@ class User extends Model
 $user->addEvent(EventType::LoggedIn);
 $user->addEvent(EventType::PurchasedItem, ['item_id' => 123, 'price' => 29.99]);
 
+// Helper methods
+$user->hasEvent(EventType::EmailVerified);        // true/false
+$user->latestEvent(EventType::LoggedIn);          // Most recent login
+$user->eventCount(EventType::PurchasedItem);      // Number of purchases
+
 // Query events
 $user->events()->ofType(EventType::PurchasedItem)->get();
+$user->events()->happenedToday()->get();
+$user->events()->happenedThisMonth()->count();
 
 // Find models by event history
 User::whereEventHasHappened(EventType::PurchasedItem)->get();
-User::whereEventHasntHappened(EventType::VerifiedEmail)->get();
+User::whereEventHasntHappened(EventType::EmailVerified)->get();
+User::whereEventHasHappenedAtLeast(EventType::PurchasedItem, 5)->get();  // VIP customers
+User::whereLatestEventIs(EventType::Churned)->get();                     // Churned users
 ```
 
 ## Requirements
