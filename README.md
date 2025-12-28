@@ -2,6 +2,23 @@
 
 A Laravel package for tracking events on Eloquent models using polymorphic relationships.
 
+```php
+// Add the trait to your User model
+class User extends Model
+{
+    use Eventable;
+}
+
+// Record events
+$user->addEvent(UserEvent::LoggedIn);
+$user->addEvent(UserEvent::SubscriptionStarted, ['plan' => 'pro']);
+
+// Query by events
+User::whereEventHasntHappened(UserEvent::EmailVerified)->get(); // Unverified users
+User::whereLatestEventIs(UserEvent::Churned)->get();            // Churned users
+User::whereEventHasHappenedAtLeast(UserEvent::Purchase, 5)->get(); // VIP customers
+```
+
 ## Installation
 
 ```bash
