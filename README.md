@@ -60,6 +60,8 @@ enum UserEvent: int
 }
 ```
 
+> **Note:** Both int-backed and string-backed enums are supported. The default migration uses a `string` column for the `type` field. If you prefer an integer column for int-backed enums, customize the migration before running it.
+
 **3. Register your enum in `config/eventable.php`:**
 
 ```php
