@@ -10,7 +10,7 @@ it('can add event to model', function () {
     $event = $model->addEvent(TestEvent::Created);
 
     expect($event)->toBeInstanceOf(Event::class);
-    expect($event->type)->toBe(TestEvent::Created->value);
+    expect($event->type)->toEqual(TestEvent::Created->value);
     expect($event->eventable_id)->toBe($model->id);
     expect($event->eventable_type)->toBe(TestModel::class);
 });

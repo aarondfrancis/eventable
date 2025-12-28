@@ -58,7 +58,7 @@ it('happenedBetween excludes boundary events', function () {
     )->get();
 
     expect($events)->toHaveCount(1);
-    expect($events->first()->type)->toBe(TestEvent::Updated->value);
+    expect($events->first()->type)->toEqual(TestEvent::Updated->value);
 });
 
 it('happenedBetween with no events in range', function () {
@@ -349,7 +349,7 @@ it('hasntHappenedInTheLast days', function () {
     $events = Event::hasntHappenedInTheLast(7, 'days')->get();
 
     expect($events)->toHaveCount(1);
-    expect($events->first()->type)->toBe(TestEvent::Updated->value);
+    expect($events->first()->type)->toEqual(TestEvent::Updated->value);
 });
 
 it('hasntHappenedInTheLast weeks', function () {
