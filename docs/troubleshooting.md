@@ -30,9 +30,22 @@ Ensure the service provider is registered. Laravel should auto-discover it, but 
 
 ## Configuration Issues
 
+### "Event enum [X] is not registered"
+
+All event enums must be registered in `config/eventable.php`:
+
+```php
+'event_types' => [
+    'user' => App\Enums\UserEvent::class,
+    'order' => App\Enums\OrderEvent::class,
+],
+```
+
+The alias (e.g., `'user'`) is stored in the database's `type_class` column.
+
 ### Pruning command fails with "No PruneableEvent enums found"
 
-Create an enum that implements `PruneableEvent` in your `app/` directory. Eventable automatically discovers these enums.
+Ensure your enum is both registered in `config/eventable.php` AND implements `PruneableEvent`.
 
 ### Pruning doesn't delete anything
 
@@ -105,12 +118,16 @@ $user->events()->whereData(['payment' => ['method' => 'card']])->get();
 
 ### Time-based queries return unexpected results
 
-Time scopes convert to UTC. If your app uses a different timezone:
+All time scopes convert to UTC before querying. By default, they use your app's timezone from `config('app.timezone')`:
 
 ```php
-// These use the current timezone
+// Uses app timezone
 Event::happenedToday()->get();
 Event::happenedThisWeek()->get();
+
+// Override with a specific timezone
+Event::happenedToday('America/New_York')->get();
+Event::happenedThisWeek('Europe/Paris')->get();
 
 // For explicit control, use happenedAfter/happenedBefore
 Event::happenedAfter(now()->startOfDay())->get();

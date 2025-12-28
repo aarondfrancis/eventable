@@ -2,6 +2,8 @@
 
 namespace AaronFrancis\Eventable\Models;
 
+use Carbon\Unit;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Arr;
@@ -25,7 +27,7 @@ class Event extends Model
     | Scopes
     |--------------------------------------------------------------------------
     */
-    public function scopeOfType($query, $type): void
+    public function scopeOfType(Builder $query, $type): void
     {
         if (is_object($type) && enum_exists($type::class)) {
             $type = $type->value;
@@ -36,7 +38,12 @@ class Event extends Model
             : $query->where('type', $type);
     }
 
-    public function scopeWhereData($query, $data = null): void
+    public function scopeOfTypeClass(Builder $query, string $typeClass): void
+    {
+        $query->where('type_class', $typeClass);
+    }
+
+    public function scopeWhereData(Builder $query, $data = null): void
     {
         if (empty($data)) {
             return;
@@ -58,38 +65,63 @@ class Event extends Model
         }
     }
 
-    public function scopeHappenedAfter($query, Carbon $time): void
+    public function scopeHappenedAfter(Builder $query, Carbon $time): void
     {
         $this->happened($query, $time, before: false);
     }
 
-    public function scopeHappenedBefore($query, Carbon $time): void
+    public function scopeHappenedBefore(Builder $query, Carbon $time): void
     {
         $this->happened($query, $time, before: true);
     }
 
-    public function scopeHappenedBetween($query, Carbon $start, Carbon $end): void
+    public function scopeHappenedBetween(Builder $query, Carbon $start, Carbon $end): void
     {
         $query->where('created_at', '>', $start->copy()->setTimezone('UTC'))
             ->where('created_at', '<', $end->copy()->setTimezone('UTC'));
     }
 
-    public function scopeHappenedToday($query): void
+    public function scopeHappenedToday(Builder $query, ?string $timezone = null): void
     {
-        $query->whereDate('created_at', Carbon::today());
+        $tz = $timezone ?? config('app.timezone', 'UTC');
+        $start = Carbon::now($tz)->startOfDay()->setTimezone('UTC');
+        $end = Carbon::now($tz)->endOfDay()->setTimezone('UTC');
+
+        $query->where('created_at', '>=', $start)
+            ->where('created_at', '<=', $end);
     }
 
-    public function scopeHappenedThisWeek($query): void
+    public function scopeHappenedThisWeek(Builder $query, ?string $timezone = null): void
     {
-        $query->where('created_at', '>=', Carbon::now()->startOfWeek());
+        $tz = $timezone ?? config('app.timezone', 'UTC');
+        $start = Carbon::now($tz)->startOfWeek()->setTimezone('UTC');
+
+        $query->where('created_at', '>=', $start);
     }
 
-    public function scopeHappenedThisMonth($query): void
+    public function scopeHappenedThisMonth(Builder $query, ?string $timezone = null): void
     {
-        $query->where('created_at', '>=', Carbon::now()->startOfMonth());
+        $tz = $timezone ?? config('app.timezone', 'UTC');
+        $start = Carbon::now($tz)->startOfMonth()->setTimezone('UTC');
+
+        $query->where('created_at', '>=', $start);
     }
 
-    protected function happened($query, Carbon $time, bool $before = true): void
+    public function scopeHappenedInTheLast(Builder $query, int $value, Unit|string $unit): void
+    {
+        $cutoff = Carbon::now()->sub($value, Unit::toName($unit))->setTimezone('UTC');
+
+        $query->where('created_at', '>=', $cutoff);
+    }
+
+    public function scopeHasntHappenedInTheLast(Builder $query, int $value, Unit|string $unit): void
+    {
+        $cutoff = Carbon::now()->sub($value, Unit::toName($unit))->setTimezone('UTC');
+
+        $query->where('created_at', '<', $cutoff);
+    }
+
+    protected function happened(Builder $query, Carbon $time, bool $before = true): void
     {
         $query->where('created_at', $before ? '<' : '>', $time->copy()->setTimezone('UTC'));
     }

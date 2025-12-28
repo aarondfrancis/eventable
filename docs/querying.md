@@ -95,6 +95,16 @@ $user->events()->happenedAfter(now()->subDays(7))->get();
 // Events before a specific time
 $user->events()->happenedBefore(now()->subMonth())->get();
 
+// Events in the last N units (use Carbon\Unit enum)
+use Carbon\Unit;
+
+$user->events()->happenedInTheLast(7, Unit::Day)->get();
+$user->events()->happenedInTheLast(24, Unit::Hour)->get();
+$user->events()->happenedInTheLast(3, Unit::Month)->get();
+
+// Events older than N units
+$user->events()->hasntHappenedInTheLast(30, Unit::Day)->get();
+
 // Combine for a date range
 $user->events()
     ->happenedAfter(now()->subDays(30))
@@ -136,10 +146,26 @@ Event::happenedThisMonth()->get();
 
 // Chain with other scopes
 $user->events()
-    ->ofType(EventType::PageViewed)
+    ->ofType(UserEvent::PageViewed)
     ->happenedToday()
     ->get();
 ```
+
+### Timezone Support
+
+Date scopes accept an optional timezone parameter. All times are converted to UTC for querying:
+
+```php
+// Use app timezone (default)
+Event::happenedToday()->get();
+
+// Override with specific timezone
+Event::happenedToday('America/Chicago')->get();
+Event::happenedThisWeek('Europe/London')->get();
+Event::happenedThisMonth('Asia/Tokyo')->get();
+```
+
+This is useful when your users are in different timezones and you need "today" to mean their local day, not the server's.
 
 ### Chaining Scopes
 

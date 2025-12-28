@@ -93,6 +93,19 @@ enum EventType: int
 }
 ```
 
+### Registering Event Types
+
+**Required:** Register all enums in `config/eventable.php`:
+
+```php
+'event_types' => [
+    'user' => App\Enums\EventType::class,
+    'order' => App\Enums\OrderEvent::class,
+],
+```
+
+This enables multiple enums with the same values (e.g., `UserEvent::Created = 1` and `OrderEvent::Created = 1`) and allows refactoring class names without breaking existing data.
+
 ### Using String-Backed Enums
 
 String enums work too:

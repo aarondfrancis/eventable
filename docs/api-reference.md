@@ -126,7 +126,7 @@ $user->eventCount(EventType::PageViewed); // Count of page views
 Find models that have a specific event.
 
 ```php
-public function scopeWhereEventHasHappened($query, BackedEnum $event, array $data = []): void
+public function scopeWhereEventHasHappened(Builder $query, BackedEnum $event, array $data = []): void
 ```
 
 **Parameters:**
@@ -144,7 +144,7 @@ User::whereEventHasHappened(EventType::OrderPlaced, ['total' => 100])->get();
 Find models that don't have a specific event.
 
 ```php
-public function scopeWhereEventHasntHappened($query, BackedEnum $event, array $data = []): void
+public function scopeWhereEventHasntHappened(Builder $query, BackedEnum $event, array $data = []): void
 ```
 
 **Parameters:**
@@ -161,7 +161,7 @@ User::whereEventHasntHappened(EventType::EmailVerified)->get();
 Find models with exactly N occurrences of an event.
 
 ```php
-public function scopeWhereEventHasHappenedTimes($query, BackedEnum $event, int $count, array $data = []): void
+public function scopeWhereEventHasHappenedTimes(Builder $query, BackedEnum $event, int $count, array $data = []): void
 ```
 
 **Parameters:**
@@ -180,7 +180,7 @@ User::whereEventHasHappenedTimes(EventType::OrderPlaced, 2, ['currency' => 'USD'
 Find models with at least N occurrences of an event.
 
 ```php
-public function scopeWhereEventHasHappenedAtLeast($query, BackedEnum $event, int $count, array $data = []): void
+public function scopeWhereEventHasHappenedAtLeast(Builder $query, BackedEnum $event, int $count, array $data = []): void
 ```
 
 **Parameters:**
@@ -199,7 +199,7 @@ User::whereEventHasHappenedAtLeast(EventType::OrderPlaced, 3, ['currency' => 'US
 Find models whose most recent event is a specific type.
 
 ```php
-public function scopeWhereLatestEventIs($query, BackedEnum $event): void
+public function scopeWhereLatestEventIs(Builder $query, BackedEnum $event): void
 ```
 
 **Parameters:**
@@ -222,6 +222,7 @@ The `AaronFrancis\Eventable\Models\Event` model stores individual events.
 | Property | Type | Description |
 |----------|------|-------------|
 | `id` | `int` | Primary key |
+| `type_class` | `string` | The registered enum alias |
 | `type` | `int\|string` | The enum value |
 | `eventable_id` | `int` | Parent model ID |
 | `eventable_type` | `string` | Parent model class |
@@ -251,7 +252,7 @@ $event->eventable; // Returns the User, Order, etc.
 Filter events by type.
 
 ```php
-public function scopeOfType($query, $type): void
+public function scopeOfType(Builder $query, $type): void
 ```
 
 **Parameters:**
@@ -264,12 +265,28 @@ Event::ofType(1)->get();
 Event::ofType([1, 2, 3])->get();
 ```
 
+#### scopeOfTypeClass()
+
+Filter events by their registered enum alias.
+
+```php
+public function scopeOfTypeClass(Builder $query, string $typeClass): void
+```
+
+**Parameters:**
+- `$typeClass` — The enum alias as registered in `config/eventable.php`
+
+**Example:**
+```php
+Event::ofTypeClass('user')->get(); // All events from the 'user' enum
+```
+
 #### scopeWhereData()
 
 Filter events by data content.
 
 ```php
-public function scopeWhereData($query, $data = null): void
+public function scopeWhereData(Builder $query, $data = null): void
 ```
 
 **Parameters:**
@@ -287,7 +304,7 @@ Event::whereData('admin_reset')->get();
 Filter events after a specific time.
 
 ```php
-public function scopeHappenedAfter($query, Carbon $time): void
+public function scopeHappenedAfter(Builder $query, Carbon $time): void
 ```
 
 **Example:**
@@ -300,7 +317,7 @@ Event::happenedAfter(now()->subDays(7))->get();
 Filter events before a specific time.
 
 ```php
-public function scopeHappenedBefore($query, Carbon $time): void
+public function scopeHappenedBefore(Builder $query, Carbon $time): void
 ```
 
 **Example:**
@@ -313,7 +330,7 @@ Event::happenedBefore(now()->subMonth())->get();
 Filter events within a date range.
 
 ```php
-public function scopeHappenedBetween($query, Carbon $start, Carbon $end): void
+public function scopeHappenedBetween(Builder $query, Carbon $start, Carbon $end): void
 ```
 
 **Parameters:**
@@ -333,13 +350,17 @@ Event::happenedBetween(
 Filter events from today.
 
 ```php
-public function scopeHappenedToday($query): void
+public function scopeHappenedToday(Builder $query, ?string $timezone = null): void
 ```
+
+**Parameters:**
+- `$timezone` — Optional timezone (defaults to `config('app.timezone')`)
 
 **Example:**
 ```php
 Event::happenedToday()->get();
-Event::ofType(EventType::PageViewed)->happenedToday()->count();
+Event::happenedToday('America/Chicago')->get();
+Event::ofType(UserEvent::PageViewed)->happenedToday()->count();
 ```
 
 #### scopeHappenedThisWeek()
@@ -347,13 +368,17 @@ Event::ofType(EventType::PageViewed)->happenedToday()->count();
 Filter events from the current week (starts Monday).
 
 ```php
-public function scopeHappenedThisWeek($query): void
+public function scopeHappenedThisWeek(Builder $query, ?string $timezone = null): void
 ```
+
+**Parameters:**
+- `$timezone` — Optional timezone (defaults to `config('app.timezone')`)
 
 **Example:**
 ```php
 Event::happenedThisWeek()->get();
-Event::ofType(EventType::OrderPlaced)->happenedThisWeek()->count();
+Event::happenedThisWeek('Europe/London')->get();
+Event::ofType(UserEvent::Purchase)->happenedThisWeek()->count();
 ```
 
 #### scopeHappenedThisMonth()
@@ -361,13 +386,61 @@ Event::ofType(EventType::OrderPlaced)->happenedThisWeek()->count();
 Filter events from the current month.
 
 ```php
-public function scopeHappenedThisMonth($query): void
+public function scopeHappenedThisMonth(Builder $query, ?string $timezone = null): void
 ```
+
+**Parameters:**
+- `$timezone` — Optional timezone (defaults to `config('app.timezone')`)
 
 **Example:**
 ```php
 Event::happenedThisMonth()->get();
-Event::ofType(EventType::UserLoggedIn)->happenedThisMonth()->count();
+Event::happenedThisMonth('Asia/Tokyo')->get();
+Event::ofType(UserEvent::LoggedIn)->happenedThisMonth()->count();
+```
+
+#### scopeHappenedInTheLast()
+
+Filter events that happened within the last N units of time.
+
+```php
+public function scopeHappenedInTheLast(Builder $query, int $value, Unit|string $unit): void
+```
+
+**Parameters:**
+- `$value` — Number of time units
+- `$unit` — Carbon `Unit` enum or string: `Unit::Day`, `Unit::Hour`, `Unit::Week`, `Unit::Month`, `Unit::Year`, etc.
+
+**Examples:**
+```php
+use Carbon\Unit;
+
+Event::happenedInTheLast(7, Unit::Day)->get();
+Event::happenedInTheLast(24, Unit::Hour)->get();
+Event::happenedInTheLast(3, Unit::Month)->get();
+
+// Strings also work
+Event::happenedInTheLast(7, 'days')->get();
+```
+
+#### scopeHasntHappenedInTheLast()
+
+Filter events that happened BEFORE the last N units of time (older than).
+
+```php
+public function scopeHasntHappenedInTheLast(Builder $query, int $value, Unit|string $unit): void
+```
+
+**Parameters:**
+- `$value` — Number of time units
+- `$unit` — Carbon `Unit` enum or string: `Unit::Day`, `Unit::Hour`, `Unit::Week`, `Unit::Month`, `Unit::Year`, etc.
+
+**Examples:**
+```php
+use Carbon\Unit;
+
+Event::hasntHappenedInTheLast(30, Unit::Day)->get();  // Events older than 30 days
+Event::hasntHappenedInTheLast(6, Unit::Month)->get(); // Events older than 6 months
 ```
 
 ---
@@ -473,5 +546,6 @@ Located at `config/eventable.php`:
 |-----|------|---------|-------------|
 | `table` | `string` | `'events'` | Database table name |
 | `model` | `string` | `Event::class` | Event model class |
+| `event_types` | `array` | `[]` | Event enum aliases (required) |
 | `register_morph_map` | `bool` | `true` | Register in morph map |
 | `morph_alias` | `string` | `'event'` | Morph map alias |

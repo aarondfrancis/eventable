@@ -48,4 +48,29 @@ class User extends Model
 }
 ```
 
+## Create and Register Your Event Enum
+
+Create a backed enum for your event types:
+
+```php
+<?php
+
+namespace App\Enums;
+
+enum UserEvent: int
+{
+    case LoggedIn = 1;
+    case EmailVerified = 2;
+    case PasswordChanged = 3;
+}
+```
+
+Register it in `config/eventable.php`:
+
+```php
+'event_types' => [
+    'user' => App\Enums\UserEvent::class,
+],
+```
+
 You're now ready to start tracking events!

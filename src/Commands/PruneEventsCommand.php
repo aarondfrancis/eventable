@@ -3,6 +3,7 @@
 namespace AaronFrancis\Eventable\Commands;
 
 use AaronFrancis\Eventable\Contracts\PruneableEvent;
+use AaronFrancis\Eventable\EventTypeRegistry;
 use AaronFrancis\Eventable\Models\Event;
 use AaronFrancis\Eventable\PruneableEventDiscovery;
 use Illuminate\Console\Command;
@@ -19,7 +20,7 @@ class PruneEventsCommand extends Command
         $enumClasses = PruneableEventDiscovery::discover();
 
         if (empty($enumClasses)) {
-            $this->error('No PruneableEvent enums found. Create an enum implementing PruneableEvent in your app directory.');
+            $this->error('No PruneableEvent enums found. Register event enums in config/eventable.php event_types.');
 
             return self::FAILURE;
         }
@@ -36,6 +37,8 @@ class PruneEventsCommand extends Command
                 continue;
             }
 
+            $typeClass = EventTypeRegistry::getAlias($enumClass);
+
             foreach ($enumClass::cases() as $case) {
                 if (! $case instanceof PruneableEvent) {
                     continue;
@@ -47,7 +50,9 @@ class PruneEventsCommand extends Command
                     continue;
                 }
 
-                $query = DB::table($table)->where('type', $case->value);
+                $query = DB::table($table)
+                    ->where('type_class', $typeClass)
+                    ->where('type', $case->value);
 
                 if ($prune->keep) {
                     $partitionBy = ['eventable_id', 'eventable_type'];
@@ -60,6 +65,7 @@ class PruneEventsCommand extends Command
 
                     $ranked = DB::table($table)
                         // Limit to only the enum we're currently working on.
+                        ->where('type_class', $typeClass)
                         ->where('type', $case->value)
                         // We use this to exclude models further down.
                         ->select('id')
@@ -77,7 +83,7 @@ class PruneEventsCommand extends Command
                 }
 
                 if ($prune->before) {
-                    $query->where('created_at', '<', $prune->before);
+                    $query->where('created_at', '<', $prune->before->copy()->setTimezone('UTC'));
                 }
 
                 if ($this->option('dry-run')) {

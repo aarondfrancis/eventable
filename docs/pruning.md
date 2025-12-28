@@ -4,7 +4,7 @@ Over time, your events table can grow large. Eventable provides a pruning system
 
 ## Setting Up Pruning
 
-Implement `PruneableEvent` on your event enum. Eventable will automatically discover all enums in your `app/` directory that implement this interface:
+Implement `PruneableEvent` on your registered event enum:
 
 ```php
 <?php

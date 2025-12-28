@@ -35,7 +35,7 @@ php artisan migrate
 
 ## Setup
 
-Add the `Eventable` trait to any model you want to track events on:
+**1. Add the trait to your models:**
 
 ```php
 use AaronFrancis\Eventable\Concerns\Eventable;
@@ -46,7 +46,7 @@ class User extends Model
 }
 ```
 
-Then create a backed enum for your event types:
+**2. Create a backed enum for your event types:**
 
 ```php
 enum UserEvent: int
@@ -54,8 +54,23 @@ enum UserEvent: int
     case LoggedIn = 1;
     case EmailVerified = 2;
     case SubscriptionStarted = 3;
+    case Churned = 4;
+    case Purchase = 5;
+    case PageViewed = 6;
 }
 ```
+
+**3. Register your enum in `config/eventable.php`:**
+
+```php
+'event_types' => [
+    'user' => App\Enums\UserEvent::class,
+],
+```
+
+This registration is required and enables:
+- Multiple enums without value collisions (e.g., both `UserEvent::Created = 1` and `OrderEvent::Created = 1`)
+- Refactoring class names without breaking existing data
 
 That's it! You're ready to start tracking events.
 
@@ -64,10 +79,10 @@ That's it! You're ready to start tracking events.
 ### Recording Events
 
 ```php
-$user->addEvent(EventType::UserLoggedIn);
+$user->addEvent(UserEvent::LoggedIn);
 
 // With additional data
-$user->addEvent(EventType::OrderPlaced, [
+$user->addEvent(UserEvent::Purchase, [
     'order_id' => 123,
     'total' => 99.99,
 ]);
@@ -77,28 +92,28 @@ $user->addEvent(EventType::OrderPlaced, [
 
 ```php
 // Check if an event exists
-$user->hasEvent(EventType::EmailVerified); // true or false
+$user->hasEvent(UserEvent::EmailVerified); // true or false
 
 // Get the most recent event
 $user->latestEvent(); // or filter by type
-$user->latestEvent(EventType::OrderPlaced);
+$user->latestEvent(UserEvent::Purchase);
 
 // Get the first event
-$user->firstEvent(EventType::UserLoggedIn);
+$user->firstEvent(UserEvent::LoggedIn);
 
 // Count events
 $user->eventCount(); // all events
-$user->eventCount(EventType::PageViewed); // by type
+$user->eventCount(UserEvent::LoggedIn); // by type
 ```
 
-### Querying Events
+### Querying a Model's Events
 
 ```php
 // Get all events for a model
 $user->events;
 
 // Filter by type
-$user->events()->ofType(EventType::UserLoggedIn)->get();
+$user->events()->ofType(UserEvent::LoggedIn)->get();
 
 // Filter by data
 $user->events()->whereData(['order_id' => 123])->get();
@@ -106,34 +121,63 @@ $user->events()->whereData(['order_id' => 123])->get();
 // Time-based queries
 $user->events()->happenedAfter(now()->subDays(7))->get();
 $user->events()->happenedBefore(now()->subMonth())->get();
+$user->events()->happenedInTheLast(7, Unit::Day)->get();
+$user->events()->happenedInTheLast(3, Unit::Hour)->get();
 $user->events()->happenedToday()->get();
 $user->events()->happenedThisWeek()->get();
 $user->events()->happenedThisMonth()->get();
+
+// With explicit timezone (defaults to app timezone)
+$user->events()->happenedToday('America/Chicago')->get();
+```
+
+### Querying Models by Event Criteria
+
+Combine scopes for complex queries using `whereHas`:
+
+```php
+// Users who made a purchase over $100 in the last 7 days
+User::whereHas('events', function ($query) {
+    $query->ofType(UserEvent::Purchase)
+        ->where('data->total', '>', 100)
+        ->happenedAfter(now()->subDays(7));
+})->get();
+
+// Users who logged in today
+User::whereHas('events', function ($query) {
+    $query->ofType(UserEvent::LoggedIn)->happenedToday();
+})->get();
+
+// Users who viewed a specific page
+User::whereHas('events', function ($query) {
+    $query->ofType(UserEvent::PageViewed)
+        ->whereData(['page' => '/pricing']);
+})->get();
 ```
 
 ### Querying Models by Events
 
 ```php
 // Find users who have logged in
-User::whereEventHasHappened(EventType::UserLoggedIn)->get();
+User::whereEventHasHappened(UserEvent::LoggedIn)->get();
 
-// Find users who haven't placed an order
-User::whereEventHasntHappened(EventType::OrderPlaced)->get();
+// Find users who haven't verified their email
+User::whereEventHasntHappened(UserEvent::EmailVerified)->get();
 
 // With specific data
-User::whereEventHasHappened(EventType::OrderPlaced, ['total' => 99.99])->get();
+User::whereEventHasHappened(UserEvent::Purchase, ['total' => 99.99])->get();
 
 // Count-based queries
-User::whereEventHasHappenedTimes(EventType::UserLoggedIn, 3)->get(); // exactly 3 times
-User::whereEventHasHappenedAtLeast(EventType::OrderPlaced, 5)->get(); // at least 5 times
+User::whereEventHasHappenedTimes(UserEvent::LoggedIn, 3)->get(); // exactly 3 times
+User::whereEventHasHappenedAtLeast(UserEvent::Purchase, 5)->get(); // at least 5 times
 
 // Find by latest event
-User::whereLatestEventIs(EventType::Subscribed)->get();
+User::whereLatestEventIs(UserEvent::SubscriptionStarted)->get();
 ```
 
 ## Pruning Old Events
 
-Implement `PruneableEvent` on your enum to configure retention policies. Eventable will automatically discover all enums implementing this interface:
+Implement `PruneableEvent` on your registered enums to configure retention policies:
 
 ```php
 use AaronFrancis\Eventable\Contracts\PruneableEvent;
@@ -143,7 +187,8 @@ enum UserEvent: int implements PruneableEvent
 {
     case LoggedIn = 1;
     case EmailVerified = 2;
-    case PageViewed = 3;
+    // ... other cases ...
+    case PageViewed = 6;
 
     public function prune(): ?PruneConfig
     {

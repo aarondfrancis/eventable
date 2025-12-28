@@ -5,31 +5,9 @@ namespace AaronFrancis\Eventable\Tests;
 use AaronFrancis\Eventable\Models\Event;
 use AaronFrancis\Eventable\Tests\Fixtures\StringEvent;
 use AaronFrancis\Eventable\Tests\Fixtures\TestModel;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
 class StringEnumTest extends TestCase
 {
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        // Drop and recreate the events table with string type for string-backed enums
-        // This avoids needing doctrine/dbal for column changes in Laravel 10
-        Schema::dropIfExists('events');
-        Schema::create('events', function (Blueprint $table) {
-            $table->id();
-            $table->string('type');
-            $table->unsignedBigInteger('eventable_id');
-            $table->string('eventable_type');
-            $table->json('data')->nullable();
-            $table->timestamps();
-
-            $table->index(['eventable_id', 'eventable_type']);
-            $table->index(['eventable_type', 'type']);
-            $table->index(['type', 'created_at']);
-        });
-    }
 
     public function test_can_add_string_backed_enum_event(): void
     {

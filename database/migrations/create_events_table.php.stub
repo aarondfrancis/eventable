@@ -10,15 +10,16 @@ return new class extends Migration
     {
         Schema::create(config('eventable.table', 'events'), function (Blueprint $table) {
             $table->id();
-            $table->unsignedInteger('type');
+            $table->string('type_class');
+            $table->string('type');
             $table->unsignedBigInteger('eventable_id');
             $table->string('eventable_type');
             $table->json('data')->nullable();
             $table->timestamps();
 
             $table->index(['eventable_id', 'eventable_type']);
-            $table->index(['eventable_type', 'type']);
-            $table->index(['type', 'created_at']);
+            $table->index(['eventable_type', 'type_class', 'type']);
+            $table->index(['type_class', 'type', 'created_at']);
         });
     }
 

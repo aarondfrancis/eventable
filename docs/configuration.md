@@ -48,6 +48,28 @@ Then update the config:
 'model' => App\Models\Event::class,
 ```
 
+### event_types
+
+**Required.** Register all your event enums with short aliases:
+
+```php
+'event_types' => [
+    'user' => App\Enums\UserEvent::class,
+    'order' => App\Enums\OrderEvent::class,
+    'subscription' => App\Enums\SubscriptionEvent::class,
+],
+```
+
+This registration serves two purposes:
+
+1. **Prevents value collisions** — Two enums can have the same integer value (e.g., `UserEvent::Created = 1` and `OrderEvent::Created = 1`) without conflicts.
+
+2. **Enables refactoring** — The alias is stored in the database instead of the full class name, so you can rename enum classes without breaking existing data.
+
+The alias is stored in the `type_class` column, and the enum value is stored in the `type` column. Together, they uniquely identify each event.
+
+**Important:** You must register an enum before using it with `addEvent()`. Attempting to use an unregistered enum will throw an `InvalidArgumentException`.
+
 ### register_morph_map
 
 Whether to register the Event model in Laravel's morph map.
@@ -77,6 +99,11 @@ return [
     'table' => 'events',
 
     'model' => App\Models\Event::class,
+
+    'event_types' => [
+        'user' => App\Enums\UserEvent::class,
+        'order' => App\Enums\OrderEvent::class,
+    ],
 
     'register_morph_map' => true,
 

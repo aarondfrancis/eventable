@@ -3,8 +3,6 @@
 namespace AaronFrancis\Eventable\Tests;
 
 use AaronFrancis\Eventable\Models\Event;
-use AaronFrancis\Eventable\PruneableEventDiscovery;
-use AaronFrancis\Eventable\Tests\Fixtures\PruneableTestEvent;
 use AaronFrancis\Eventable\Tests\Fixtures\TestEvent;
 use AaronFrancis\Eventable\Tests\Fixtures\TestModel;
 use Illuminate\Support\Carbon;
@@ -52,8 +50,6 @@ class EdgeCaseTest extends TestCase
 
     public function test_prune_on_empty_database(): void
     {
-        PruneableEventDiscovery::register(PruneableTestEvent::class);
-
         $this->artisan('eventable:prune')
             ->expectsOutputToContain('0 records pruned')
             ->assertExitCode(0);

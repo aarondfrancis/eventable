@@ -24,6 +24,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Event Types Map
+    |--------------------------------------------------------------------------
+    |
+    | Register your event enums here with short aliases. This is REQUIRED for
+    | all event enums you use. The alias is stored in the database, allowing
+    | you to refactor enum class names without breaking existing data.
+    |
+    | Example:
+    |   'event_types' => [
+    |       'user' => App\Enums\UserEvent::class,
+    |       'order' => App\Enums\OrderEvent::class,
+    |   ],
+    |
+    */
+    'event_types' => [
+        // 'user' => App\Enums\UserEvent::class,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Morph Map Registration
     |--------------------------------------------------------------------------
     |

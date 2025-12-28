@@ -48,6 +48,14 @@ User::whereLatestEventIs(EventType::Churned)->get();                     // Chur
 - PHP 8.2+
 - Laravel 10, 11, or 12
 
+## Setup
+
+1. Add the `Eventable` trait to your models
+2. Create backed enums for your event types
+3. Register enums in `config/eventable.php` under `event_types`
+
+See the [Installation](installation.md) guide for details.
+
 ## License
 
 MIT
