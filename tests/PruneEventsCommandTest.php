@@ -3,6 +3,7 @@
 namespace AaronFrancis\Eventable\Tests;
 
 use AaronFrancis\Eventable\Models\Event;
+use AaronFrancis\Eventable\PruneableEventDiscovery;
 use AaronFrancis\Eventable\Tests\Fixtures\PruneableTestEvent;
 use AaronFrancis\Eventable\Tests\Fixtures\TestEvent;
 use AaronFrancis\Eventable\Tests\Fixtures\TestModel;
@@ -16,27 +17,18 @@ class PruneEventsCommandTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_fails_without_enum_configured(): void
+    public function test_fails_when_no_pruneable_enums_found(): void
     {
-        config(['eventable.event_enum' => null]);
+        // Don't register any enums - discovery should find nothing
 
         $this->artisan('eventable:prune')
-            ->expectsOutput('No event enum configured. Set eventable.event_enum in your config.')
-            ->assertExitCode(1);
-    }
-
-    public function test_fails_with_nonexistent_enum(): void
-    {
-        config(['eventable.event_enum' => 'NonExistentEnum']);
-
-        $this->artisan('eventable:prune')
-            ->expectsOutput('The configured event enum [NonExistentEnum] does not exist.')
+            ->expectsOutput('No PruneableEvent enums found. Create an enum implementing PruneableEvent in your app directory.')
             ->assertExitCode(1);
     }
 
     public function test_skips_non_pruneable_events(): void
     {
-        config(['eventable.event_enum' => TestEvent::class]);
+        PruneableEventDiscovery::register(TestEvent::class);
 
         $model = TestModel::create(['name' => 'Test']);
         $model->addEvent(TestEvent::Created);
@@ -49,7 +41,7 @@ class PruneEventsCommandTest extends TestCase
 
     public function test_prunes_events_older_than_before_date(): void
     {
-        config(['eventable.event_enum' => PruneableTestEvent::class]);
+        PruneableEventDiscovery::register(PruneableTestEvent::class);
 
         $model = TestModel::create(['name' => 'Test']);
         $now = Carbon::now();
@@ -80,7 +72,7 @@ class PruneEventsCommandTest extends TestCase
 
     public function test_keeps_last_n_events(): void
     {
-        config(['eventable.event_enum' => PruneableTestEvent::class]);
+        PruneableEventDiscovery::register(PruneableTestEvent::class);
 
         $model = TestModel::create(['name' => 'Test']);
         $now = Carbon::now();
@@ -105,7 +97,7 @@ class PruneEventsCommandTest extends TestCase
 
     public function test_keeps_last_n_per_model(): void
     {
-        config(['eventable.event_enum' => PruneableTestEvent::class]);
+        PruneableEventDiscovery::register(PruneableTestEvent::class);
 
         $model1 = TestModel::create(['name' => 'Model 1']);
         $model2 = TestModel::create(['name' => 'Model 2']);
@@ -142,7 +134,7 @@ class PruneEventsCommandTest extends TestCase
 
     public function test_vary_on_data_keeps_separate_counts(): void
     {
-        config(['eventable.event_enum' => PruneableTestEvent::class]);
+        PruneableEventDiscovery::register(PruneableTestEvent::class);
 
         $model = TestModel::create(['name' => 'Test']);
         $now = Carbon::now();
@@ -180,7 +172,7 @@ class PruneEventsCommandTest extends TestCase
 
     public function test_dry_run_does_not_delete(): void
     {
-        config(['eventable.event_enum' => PruneableTestEvent::class]);
+        PruneableEventDiscovery::register(PruneableTestEvent::class);
 
         $model = TestModel::create(['name' => 'Test']);
         $now = Carbon::now();
@@ -202,7 +194,7 @@ class PruneEventsCommandTest extends TestCase
 
     public function test_skips_events_with_null_prune_config(): void
     {
-        config(['eventable.event_enum' => PruneableTestEvent::class]);
+        PruneableEventDiscovery::register(PruneableTestEvent::class);
 
         $model = TestModel::create(['name' => 'Test']);
         $now = Carbon::now();
@@ -228,7 +220,7 @@ class PruneEventsCommandTest extends TestCase
 
     public function test_outputs_correct_counts(): void
     {
-        config(['eventable.event_enum' => PruneableTestEvent::class]);
+        PruneableEventDiscovery::register(PruneableTestEvent::class);
 
         $model = TestModel::create(['name' => 'Test']);
         $now = Carbon::now();

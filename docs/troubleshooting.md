@@ -30,17 +30,9 @@ Ensure the service provider is registered. Laravel should auto-discover it, but 
 
 ## Configuration Issues
 
-### Pruning command fails with "No event enum configured"
+### Pruning command fails with "No PruneableEvent enums found"
 
-You must set the `event_enum` in your config:
-
-```php
-// config/eventable.php
-return [
-    'event_enum' => App\Enums\EventType::class,
-    // ...
-];
-```
+Create an enum that implements `PruneableEvent` in your `app/` directory. Eventable automatically discovers these enums.
 
 ### Pruning doesn't delete anything
 

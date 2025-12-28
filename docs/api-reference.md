@@ -473,6 +473,5 @@ Located at `config/eventable.php`:
 |-----|------|---------|-------------|
 | `table` | `string` | `'events'` | Database table name |
 | `model` | `string` | `Event::class` | Event model class |
-| `event_enum` | `string\|null` | `null` | Your event enum class |
 | `register_morph_map` | `bool` | `true` | Register in morph map |
 | `morph_alias` | `string` | `'event'` | Morph map alias |

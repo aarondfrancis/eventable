@@ -24,21 +24,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Event Enum
-    |--------------------------------------------------------------------------
-    |
-    | The enum class that defines your event types. This enum must be a
-    | BackedEnum and should implement PruneableEvent if you want to use
-    | the pruning functionality.
-    |
-    | Example:
-    |   'event_enum' => App\Enums\EventType::class,
-    |
-    */
-    'event_enum' => null,
-
-    /*
-    |--------------------------------------------------------------------------
     | Morph Map Registration
     |--------------------------------------------------------------------------
     |

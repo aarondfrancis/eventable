@@ -30,38 +30,6 @@ This will create:
 php artisan migrate
 ```
 
-## Create Your Event Enum
-
-Create a backed enum to define your event types:
-
-```php
-<?php
-
-namespace App\Enums;
-
-enum EventType: int
-{
-    case UserRegistered = 1;
-    case UserLoggedIn = 2;
-    case PasswordChanged = 3;
-    case OrderPlaced = 4;
-    case OrderShipped = 5;
-}
-```
-
-You can use either `int` or `string` backed enums.
-
-## Configure the Package
-
-Update `config/eventable.php` to specify your enum:
-
-```php
-return [
-    'event_enum' => App\Enums\EventType::class,
-    // ...
-];
-```
-
 ## Add the Trait to Your Models
 
 Add the `Eventable` trait to any model you want to track events on:

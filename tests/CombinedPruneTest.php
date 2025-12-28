@@ -3,6 +3,7 @@
 namespace AaronFrancis\Eventable\Tests;
 
 use AaronFrancis\Eventable\Models\Event;
+use AaronFrancis\Eventable\PruneableEventDiscovery;
 use AaronFrancis\Eventable\Tests\Fixtures\CombinedPruneEvent;
 use AaronFrancis\Eventable\Tests\Fixtures\TestModel;
 use Illuminate\Support\Carbon;
@@ -17,7 +18,7 @@ class CombinedPruneTest extends TestCase
 
     public function test_combined_before_and_keep_prunes_correctly(): void
     {
-        config(['eventable.event_enum' => CombinedPruneEvent::class]);
+        PruneableEventDiscovery::register(CombinedPruneEvent::class);
 
         $model = TestModel::create(['name' => 'Test']);
         $now = Carbon::now();
@@ -63,7 +64,7 @@ class CombinedPruneTest extends TestCase
 
     public function test_keep_without_vary_on_data_treats_all_data_same(): void
     {
-        config(['eventable.event_enum' => CombinedPruneEvent::class]);
+        PruneableEventDiscovery::register(CombinedPruneEvent::class);
 
         $model = TestModel::create(['name' => 'Test']);
         $now = Carbon::now();
@@ -90,7 +91,7 @@ class CombinedPruneTest extends TestCase
 
     public function test_combined_conditions_across_multiple_models(): void
     {
-        config(['eventable.event_enum' => CombinedPruneEvent::class]);
+        PruneableEventDiscovery::register(CombinedPruneEvent::class);
 
         $model1 = TestModel::create(['name' => 'Model 1']);
         $model2 = TestModel::create(['name' => 'Model 2']);
@@ -128,7 +129,7 @@ class CombinedPruneTest extends TestCase
 
     public function test_before_date_respected_even_with_keep(): void
     {
-        config(['eventable.event_enum' => CombinedPruneEvent::class]);
+        PruneableEventDiscovery::register(CombinedPruneEvent::class);
 
         $model = TestModel::create(['name' => 'Test']);
         $now = Carbon::now();

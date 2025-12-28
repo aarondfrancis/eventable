@@ -48,16 +48,6 @@ Then update the config:
 'model' => App\Models\Event::class,
 ```
 
-### event_enum
-
-The enum class that defines your event types.
-
-```php
-'event_enum' => App\Enums\EventType::class,
-```
-
-This is required for the pruning command to work. The enum must be a [backed enum](https://www.php.net/manual/en/language.enumerations.backed.php).
-
 ### register_morph_map
 
 Whether to register the Event model in Laravel's morph map.
@@ -87,8 +77,6 @@ return [
     'table' => 'events',
 
     'model' => App\Models\Event::class,
-
-    'event_enum' => App\Enums\EventType::class,
 
     'register_morph_map' => true,
 

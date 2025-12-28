@@ -3,6 +3,7 @@
 namespace AaronFrancis\Eventable\Tests;
 
 use AaronFrancis\Eventable\EventableServiceProvider;
+use AaronFrancis\Eventable\PruneableEventDiscovery;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Orchestra\Testbench\TestCase as Orchestra;
@@ -14,6 +15,13 @@ abstract class TestCase extends Orchestra
         parent::setUp();
 
         $this->setUpDatabase();
+    }
+
+    protected function tearDown(): void
+    {
+        PruneableEventDiscovery::clear();
+
+        parent::tearDown();
     }
 
     protected function getPackageProviders($app): array

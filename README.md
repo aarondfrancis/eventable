@@ -35,60 +35,29 @@ php artisan migrate
 
 ## Setup
 
-### 1. Create an Event Type Enum
-
-Create a backed enum for your event types. Implement `PruneableEvent` if you want automatic pruning:
+Add the `Eventable` trait to any model you want to track events on:
 
 ```php
-<?php
-
-namespace App\Enums;
-
-use AaronFrancis\Eventable\Contracts\PruneableEvent;
-use AaronFrancis\Eventable\PruneConfig;
-
-enum EventType: int implements PruneableEvent
-{
-    case UserLoggedIn = 1;
-    case OrderPlaced = 2;
-    case EmailSent = 3;
-
-    public function prune(): ?PruneConfig
-    {
-        return match ($this) {
-            self::UserLoggedIn => new PruneConfig(keep: 5),
-            default => null, // Don't prune
-        };
-    }
-}
-```
-
-### 2. Configure the Package
-
-Update `config/eventable.php`:
-
-```php
-return [
-    'event_enum' => App\Enums\EventType::class,
-    // ...
-];
-```
-
-### 3. Add the Trait to Your Models
-
-```php
-<?php
-
-namespace App\Models;
-
 use AaronFrancis\Eventable\Concerns\Eventable;
-use Illuminate\Database\Eloquent\Model;
 
 class User extends Model
 {
     use Eventable;
 }
 ```
+
+Then create a backed enum for your event types:
+
+```php
+enum UserEvent: int
+{
+    case LoggedIn = 1;
+    case EmailVerified = 2;
+    case SubscriptionStarted = 3;
+}
+```
+
+That's it! You're ready to start tracking events.
 
 ## Usage
 
@@ -164,23 +133,30 @@ User::whereLatestEventIs(EventType::Subscribed)->get();
 
 ## Pruning Old Events
 
-Configure pruning rules in your enum's `prune()` method:
+Implement `PruneableEvent` on your enum to configure retention policies. Eventable will automatically discover all enums implementing this interface:
 
 ```php
-public function prune(): ?PruneConfig
+use AaronFrancis\Eventable\Contracts\PruneableEvent;
+use AaronFrancis\Eventable\PruneConfig;
+
+enum UserEvent: int implements PruneableEvent
 {
-    return match ($this) {
-        // Keep only the last 5 login events per user
-        self::UserLoggedIn => new PruneConfig(keep: 5),
+    case LoggedIn = 1;
+    case EmailVerified = 2;
+    case PageViewed = 3;
 
-        // Delete events older than 30 days
-        self::EmailSent => new PruneConfig(before: now()->subDays(30)),
+    public function prune(): ?PruneConfig
+    {
+        return match ($this) {
+            // Keep only the last 5 login events per user
+            self::LoggedIn => new PruneConfig(keep: 5),
 
-        // Keep last 10, but treat different data as separate (default)
-        self::OrderPlaced => new PruneConfig(keep: 10, varyOnData: true),
+            // Delete page views older than 30 days
+            self::PageViewed => new PruneConfig(before: now()->subDays(30)),
 
-        default => null, // Don't prune
-    };
+            default => null, // Don't prune
+        };
+    }
 }
 ```
 
