@@ -3,7 +3,7 @@
 ## Requirements
 
 - PHP 8.2 or higher
-- Laravel 10.x, 11.x, or 12.x
+- Laravel 11.x or 12.x
 
 ## Install via Composer
 
@@ -71,6 +71,22 @@ Register it in `config/eventable.php`:
 'event_types' => [
     'user' => App\Enums\UserEvent::class,
 ],
+```
+
+> **Note:** Both int-backed and string-backed enums are supported. The default migration uses a `string` column for the `type` field. If you prefer an integer column for int-backed enums, customize the migration before running it.
+
+## (Recommended) Enforce a Morph Map
+
+Since Eventable uses polymorphic relationships, we highly recommend using Laravel's [Enforced Morph Map](https://laravel.com/docs/eloquent-relationships#custom-polymorphic-types) to avoid storing full class names in the database:
+
+```php
+// In AppServiceProvider::boot()
+use Illuminate\Database\Eloquent\Relations\Relation;
+
+Relation::enforceMorphMap([
+    'user' => \App\Models\User::class,
+    'order' => \App\Models\Order::class,
+]);
 ```
 
 You're now ready to start tracking events!

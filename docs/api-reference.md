@@ -538,6 +538,86 @@ php artisan eventable:prune
 
 ---
 
+## EventTypeRegistry
+
+The `AaronFrancis\Eventable\EventTypeRegistry` class manages event enum registration.
+
+### Static Methods
+
+#### register()
+
+Manually register an event enum (useful for testing).
+
+```php
+public static function register(string $alias, string $enumClass): void
+```
+
+**Example:**
+```php
+EventTypeRegistry::register('user', App\Enums\UserEvent::class);
+```
+
+#### getAlias()
+
+Get the alias for an event enum.
+
+```php
+public static function getAlias(string|BackedEnum $enum): string
+```
+
+**Example:**
+```php
+$alias = EventTypeRegistry::getAlias(UserEvent::LoggedIn); // 'user'
+$alias = EventTypeRegistry::getAlias(UserEvent::class);    // 'user'
+```
+
+#### getClass()
+
+Get the enum class for an alias.
+
+```php
+public static function getClass(string $alias): string
+```
+
+**Example:**
+```php
+$class = EventTypeRegistry::getClass('user'); // App\Enums\UserEvent::class
+```
+
+#### isRegistered()
+
+Check if an enum is registered.
+
+```php
+public static function isRegistered(string|BackedEnum $enum): bool
+```
+
+#### hasAlias()
+
+Check if an alias exists.
+
+```php
+public static function hasAlias(string $alias): bool
+```
+
+#### all()
+
+Get all registered event types (config + manual).
+
+```php
+public static function all(): array
+```
+
+#### clear()
+
+Clear all manual registrations (config registrations remain).
+
+```php
+public static function clear(): void
+```
+
+---
+
 ## Configuration
 
 Located at `config/eventable.php`:

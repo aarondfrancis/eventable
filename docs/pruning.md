@@ -144,15 +144,6 @@ use Illuminate\Support\Facades\Schedule;
 Schedule::command('eventable:prune')->daily();
 ```
 
-Or in Laravel 10 and earlier, use the `app/Console/Kernel.php`:
-
-```php
-protected function schedule(Schedule $schedule)
-{
-    $schedule->command('eventable:prune')->daily();
-}
-```
-
 ### Recommended Schedule
 
 - **Daily** — Good for most applications
