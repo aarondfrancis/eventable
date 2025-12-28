@@ -8,7 +8,6 @@ use AaronFrancis\Eventable\Tests\Fixtures\TestModel;
 
 class StringEnumTest extends TestCase
 {
-
     public function test_can_add_string_backed_enum_event(): void
     {
         $model = TestModel::create(['name' => 'Test']);
