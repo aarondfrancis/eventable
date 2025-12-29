@@ -11,8 +11,8 @@
     ],
     "require": {
         "php": "^8.2",
-        "illuminate/database": "^11.0|^12.0",
-        "illuminate/support": "^11.0|^12.0",
+        "illuminate/database": "^11.0|^12.24",
+        "illuminate/support": "^11.0|^12.24",
         "nesbot/carbon": "^3.0",
         "staudenmeir/laravel-cte": "^1.6"
     },
