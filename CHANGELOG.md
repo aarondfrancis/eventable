@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **BREAKING:** Renamed `Eventable` trait to `HasEvents` for Laravel naming consistency
 - Require Carbon 3 explicitly for `Unit` enum support
 - Support PHP 8.5 with Laravel 12 and Pest 4
 

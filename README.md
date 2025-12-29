@@ -12,7 +12,7 @@ A Laravel package for tracking events on Eloquent models using polymorphic relat
 // Add the trait to your User model
 class User extends Model
 {
-    use Eventable;
+    use HasEvents;
 }
 
 // Record events
@@ -44,11 +44,11 @@ php artisan migrate
 **1. Add the trait to your models:**
 
 ```php
-use AaronFrancis\Eventable\Concerns\Eventable;
+use AaronFrancis\Eventable\Concerns\HasEvents;
 
 class User extends Model
 {
-    use Eventable;
+    use HasEvents;
 }
 ```
 

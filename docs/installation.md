@@ -32,19 +32,19 @@ php artisan migrate
 
 ## Add the Trait to Your Models
 
-Add the `Eventable` trait to any model you want to track events on:
+Add the `HasEvents` trait to any model you want to track events on:
 
 ```php
 <?php
 
 namespace App\Models;
 
-use AaronFrancis\Eventable\Concerns\Eventable;
+use AaronFrancis\Eventable\Concerns\HasEvents;
 use Illuminate\Database\Eloquent\Model;
 
 class User extends Model
 {
-    use Eventable;
+    use HasEvents;
 }
 ```
 

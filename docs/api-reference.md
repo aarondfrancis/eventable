@@ -1,15 +1,15 @@
 # API Reference
 
-## Eventable Trait
+## HasEvents Trait
 
 Add to any Eloquent model to enable event tracking.
 
 ```php
-use AaronFrancis\Eventable\Concerns\Eventable;
+use AaronFrancis\Eventable\Concerns\HasEvents;
 
 class User extends Model
 {
-    use Eventable;
+    use HasEvents;
 }
 ```
 

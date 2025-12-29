@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 /**
  * @method MorphMany morphMany(string $related, string $name, ?string $type = null, ?string $id = null, ?string $localKey = null)
  */
-trait Eventable
+trait HasEvents
 {
     public function addEvent(BackedEnum $event, mixed $data = null): Event
     {

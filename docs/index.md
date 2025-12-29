@@ -15,11 +15,11 @@ A Laravel package for tracking events on Eloquent models using polymorphic relat
 ## Quick Example
 
 ```php
-use AaronFrancis\Eventable\Concerns\Eventable;
+use AaronFrancis\Eventable\Concerns\HasEvents;
 
 class User extends Model
 {
-    use Eventable;
+    use HasEvents;
 }
 
 // Record events
@@ -50,7 +50,7 @@ User::whereLatestEventIs(EventType::Churned)->get();                     // Chur
 
 ## Setup
 
-1. Add the `Eventable` trait to your models
+1. Add the `HasEvents` trait to your models
 2. Create backed enums for your event types
 3. Register enums in `config/eventable.php` under `event_types`
 
