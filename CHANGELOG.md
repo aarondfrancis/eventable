@@ -7,10 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2025-12-29
+
 ### Changed
 - **BREAKING:** Renamed `Eventable` trait to `HasEvents` for Laravel naming consistency
 - Require Carbon 3 explicitly for `Unit` enum support
 - Support PHP 8.5 with Laravel 12 and Pest 4
+
 
 ## [0.1.0] - 2025-12-28
 
@@ -31,3 +34,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [Unreleased]: https://github.com/aarondfrancis/eventable/compare/HEAD
 [0.1.0]: https://github.com/aarondfrancis/eventable/releases/tag/v0.1.0
+[0.2.0]: https://github.com/aarondfrancis/eventable/releases/tag/v0.2.0
