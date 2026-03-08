@@ -2,8 +2,15 @@
 
 use AaronFrancis\Eventable\Models\Event;
 use AaronFrancis\Eventable\Tests\Fixtures\CustomEvent;
+use AaronFrancis\Eventable\Tests\Fixtures\PrunableCustomEvent;
+use AaronFrancis\Eventable\Tests\Fixtures\PruneableTestEvent;
 use AaronFrancis\Eventable\Tests\Fixtures\TestEvent;
 use AaronFrancis\Eventable\Tests\Fixtures\TestModel;
+use Illuminate\Support\Carbon;
+
+afterEach(function () {
+    Carbon::setTestNow();
+});
 
 it('can use custom event model', function () {
     config(['eventable.model' => CustomEvent::class]);
@@ -54,4 +61,23 @@ it('scopes work with custom model', function () {
     $models = TestModel::whereEventHasHappened(TestEvent::Created)->get();
 
     expect($models)->toHaveCount(1);
+});
+
+it('prune command uses the configured event model query builder', function () {
+    config(['eventable.model' => PrunableCustomEvent::class]);
+
+    $model = TestModel::create(['name' => 'Test']);
+    $now = Carbon::now();
+
+    Carbon::setTestNow($now->copy()->subDays(45));
+    $model->addEvent(PruneableTestEvent::PruneOlderThan30Days);
+
+    Carbon::setTestNow($now);
+    PrunableCustomEvent::resetQueryFlag();
+
+    $this->artisan('eventable:prune')
+        ->assertExitCode(0);
+
+    expect(PrunableCustomEvent::$newQueryWasCalled)->toBeTrue();
+    expect(Event::count())->toBe(0);
 });

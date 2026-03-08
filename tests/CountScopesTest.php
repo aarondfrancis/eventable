@@ -1,5 +1,6 @@
 <?php
 
+use AaronFrancis\Eventable\Models\Event;
 use AaronFrancis\Eventable\Tests\Fixtures\TestEvent;
 use AaronFrancis\Eventable\Tests\Fixtures\TestModel;
 use Illuminate\Support\Carbon;
@@ -211,6 +212,50 @@ it('whereLatestEventIs single event', function () {
     $model->addEvent(TestEvent::Exported);
 
     $models = TestModel::whereLatestEventIs(TestEvent::Exported)->get();
+
+    expect($models)->toHaveCount(1);
+    expect($models->first()->id)->toBe($model->id);
+});
+
+it('whereLatestEventIs uses created_at before id for backfilled events', function () {
+    $model = TestModel::create(['name' => 'Test']);
+
+    Event::create([
+        'type_class' => 'test',
+        'type' => TestEvent::Created->value,
+        'eventable_id' => $model->id,
+        'eventable_type' => TestModel::class,
+        'created_at' => Carbon::parse('2024-01-10 12:00:00'),
+        'updated_at' => Carbon::parse('2024-01-10 12:00:00'),
+    ]);
+
+    Event::create([
+        'type_class' => 'test',
+        'type' => TestEvent::Updated->value,
+        'eventable_id' => $model->id,
+        'eventable_type' => TestModel::class,
+        'created_at' => Carbon::parse('2024-01-05 12:00:00'),
+        'updated_at' => Carbon::parse('2024-01-05 12:00:00'),
+    ]);
+
+    expect($model->latestEvent()?->type)->toEqual(TestEvent::Created->value);
+
+    $models = TestModel::whereLatestEventIs(TestEvent::Created)->get();
+
+    expect($models)->toHaveCount(1);
+    expect($models->first()->id)->toBe($model->id);
+});
+
+it('whereLatestEventIs breaks timestamp ties with the newest id', function () {
+    $model = TestModel::create(['name' => 'Test']);
+
+    Carbon::setTestNow('2024-01-15 12:00:00');
+    $model->addEvent(TestEvent::Created);
+    $latest = $model->addEvent(TestEvent::Updated);
+
+    expect($model->latestEvent()?->id)->toBe($latest->id);
+
+    $models = TestModel::whereLatestEventIs(TestEvent::Updated)->get();
 
     expect($models)->toHaveCount(1);
     expect($models->first()->id)->toBe($model->id);

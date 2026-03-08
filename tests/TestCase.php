@@ -4,22 +4,24 @@ namespace AaronFrancis\Eventable\Tests;
 
 use AaronFrancis\Eventable\EventableServiceProvider;
 use AaronFrancis\Eventable\EventTypeRegistry;
+use AaronFrancis\Eventable\Tests\Fixtures\CollidingEvent;
 use AaronFrancis\Eventable\Tests\Fixtures\CombinedPruneEvent;
 use AaronFrancis\Eventable\Tests\Fixtures\CustomEvent;
 use AaronFrancis\Eventable\Tests\Fixtures\PruneableTestEvent;
 use AaronFrancis\Eventable\Tests\Fixtures\StringEvent;
 use AaronFrancis\Eventable\Tests\Fixtures\TestEvent;
-use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\Schema;
 use Orchestra\Testbench\TestCase as Orchestra;
 
 abstract class TestCase extends Orchestra
 {
+    use DatabaseMigrations;
+
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->setUpDatabase();
         $this->registerEventTypes();
     }
 
@@ -40,39 +42,56 @@ abstract class TestCase extends Orchestra
 
     protected function defineEnvironment($app): void
     {
+        $driver = env('DB_CONNECTION', 'sqlite');
+
+        Schema::defaultMorphKeyType('int');
+
         $app['config']->set('database.default', 'testing');
-        $app['config']->set('database.connections.testing', [
-            'driver' => 'sqlite',
-            'database' => ':memory:',
-        ]);
+
+        if ($driver === 'sqlite') {
+            $app['config']->set('database.connections.testing', [
+                'driver' => 'sqlite',
+                'database' => ':memory:',
+                'prefix' => '',
+                'foreign_key_constraints' => true,
+            ]);
+        } elseif ($driver === 'pgsql') {
+            $app['config']->set('database.connections.testing', [
+                'driver' => 'pgsql',
+                'host' => env('DB_HOST', '127.0.0.1'),
+                'port' => env('DB_PORT', '5432'),
+                'database' => env('DB_DATABASE', 'testing'),
+                'username' => env('DB_USERNAME', 'postgres'),
+                'password' => env('DB_PASSWORD', 'postgres'),
+                'charset' => 'utf8',
+                'prefix' => '',
+                'schema' => 'public',
+            ]);
+        } elseif ($driver === 'mysql') {
+            $app['config']->set('database.connections.testing', [
+                'driver' => 'mysql',
+                'host' => env('DB_HOST', '127.0.0.1'),
+                'port' => env('DB_PORT', '3306'),
+                'database' => env('DB_DATABASE', 'testing'),
+                'username' => env('DB_USERNAME', 'root'),
+                'password' => env('DB_PASSWORD', 'password'),
+                'charset' => 'utf8mb4',
+                'collation' => 'utf8mb4_unicode_ci',
+                'prefix' => '',
+                'strict' => true,
+            ]);
+        }
     }
 
-    protected function setUpDatabase(): void
+    protected function runDatabaseMigrations(): void
     {
-        Schema::create('events', function (Blueprint $table) {
-            $table->id();
-            $table->string('type_class');
-            $table->string('type');
-            $table->unsignedBigInteger('eventable_id');
-            $table->string('eventable_type');
-            $table->json('data')->nullable();
-            $table->timestamps();
+        $this->artisan('migrate:fresh', [
+            '--path' => __DIR__.'/database/migrations',
+            '--realpath' => true,
+        ]);
 
-            $table->index(['eventable_id', 'eventable_type']);
-            $table->index(['eventable_type', 'type_class', 'type']);
-            $table->index(['type_class', 'type', 'created_at']);
-        });
-
-        Schema::create('test_models', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->timestamps();
-        });
-
-        Schema::create('another_models', function (Blueprint $table) {
-            $table->id();
-            $table->string('title');
-            $table->timestamps();
+        $this->beforeApplicationDestroyed(function () {
+            $this->artisan('migrate:rollback');
         });
     }
 
@@ -80,6 +99,7 @@ abstract class TestCase extends Orchestra
     {
         EventTypeRegistry::register('test', TestEvent::class);
         EventTypeRegistry::register('string', StringEvent::class);
+        EventTypeRegistry::register('colliding', CollidingEvent::class);
         EventTypeRegistry::register('pruneable', PruneableTestEvent::class);
         EventTypeRegistry::register('combined', CombinedPruneEvent::class);
         EventTypeRegistry::register('custom', CustomEvent::class);

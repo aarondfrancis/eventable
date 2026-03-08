@@ -67,6 +67,8 @@ enum UserEvent: int
 ```
 
 > **Note:** Both int-backed and string-backed enums are supported. The default migration uses a `string` column for the `type` field. If you prefer an integer column for int-backed enums, customize the migration before running it.
+>
+> **UUID/ULID models:** The published migration uses Laravel's default morph key type. If your app uses UUIDs or ULIDs for polymorphic keys, call `Schema::morphUsingUuids()` or `Schema::morphUsingUlids()` before running the migration.
 
 **3. Register your enum in `config/eventable.php`:**
 

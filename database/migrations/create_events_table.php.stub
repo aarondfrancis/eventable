@@ -12,12 +12,10 @@ return new class extends Migration
             $table->id();
             $table->string('type_class');
             $table->string('type');
-            $table->unsignedBigInteger('eventable_id');
-            $table->string('eventable_type');
+            $table->morphs('eventable');
             $table->json('data')->nullable();
             $table->timestamps();
 
-            $table->index(['eventable_id', 'eventable_type']);
             $table->index(['eventable_type', 'type_class', 'type']);
             $table->index(['type_class', 'type', 'created_at']);
         });

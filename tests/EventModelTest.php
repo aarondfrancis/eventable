@@ -1,6 +1,7 @@
 <?php
 
 use AaronFrancis\Eventable\Models\Event;
+use AaronFrancis\Eventable\Tests\Fixtures\CollidingEvent;
 use AaronFrancis\Eventable\Tests\Fixtures\TestEvent;
 use AaronFrancis\Eventable\Tests\Fixtures\TestModel;
 use Illuminate\Support\Carbon;
@@ -72,6 +73,31 @@ it('filters with ofType scope using array of enum values', function () {
     expect($events)->toHaveCount(2);
 });
 
+it('filters with ofType scope by enum alias when values collide', function () {
+    $model = TestModel::create(['name' => 'Test']);
+
+    $model->addEvent(TestEvent::Created);
+    $model->addEvent(CollidingEvent::Created);
+
+    $events = Event::ofType(TestEvent::Created)->get();
+
+    expect($events)->toHaveCount(1);
+    expect($events->first()->type_class)->toBe('test');
+});
+
+it('filters with ofType scope using array of enum cases from the same enum', function () {
+    $model = TestModel::create(['name' => 'Test']);
+
+    $model->addEvent(TestEvent::Created);
+    $model->addEvent(TestEvent::Updated);
+    $model->addEvent(CollidingEvent::Archived);
+
+    $events = Event::ofType([TestEvent::Created, TestEvent::Updated])->get();
+
+    expect($events)->toHaveCount(2);
+    expect($events->pluck('type_class')->unique()->all())->toBe(['test']);
+});
+
 it('filters with whereData scope with empty data', function () {
     $model = TestModel::create(['name' => 'Test']);
     $model->addEvent(TestEvent::Created, ['key' => 'value']);
@@ -90,6 +116,50 @@ it('filters with whereData scope with scalar', function () {
     $events = Event::whereData('simple-value')->get();
 
     expect($events)->toHaveCount(1);
+});
+
+it('filters with whereData scope with false scalar', function () {
+    $model = TestModel::create(['name' => 'Test']);
+    $model->addEvent(TestEvent::Created, false);
+    $model->addEvent(TestEvent::Updated, true);
+
+    $events = Event::whereData(false)->get();
+
+    expect($events)->toHaveCount(1);
+    expect($events->first()->type)->toEqual(TestEvent::Created->value);
+});
+
+it('filters with whereData scope with zero scalar', function () {
+    $model = TestModel::create(['name' => 'Test']);
+    $model->addEvent(TestEvent::Created, 0);
+    $model->addEvent(TestEvent::Updated, 1);
+
+    $events = Event::whereData(0)->get();
+
+    expect($events)->toHaveCount(1);
+    expect($events->first()->type)->toEqual(TestEvent::Created->value);
+});
+
+it('filters with whereData scope with zero string scalar', function () {
+    $model = TestModel::create(['name' => 'Test']);
+    $model->addEvent(TestEvent::Created, '0');
+    $model->addEvent(TestEvent::Updated, '1');
+
+    $events = Event::whereData('0')->get();
+
+    expect($events)->toHaveCount(1);
+    expect($events->first()->type)->toEqual(TestEvent::Created->value);
+});
+
+it('filters with whereData scope with empty string scalar', function () {
+    $model = TestModel::create(['name' => 'Test']);
+    $model->addEvent(TestEvent::Created, '');
+    $model->addEvent(TestEvent::Updated, 'filled');
+
+    $events = Event::whereData('')->get();
+
+    expect($events)->toHaveCount(1);
+    expect($events->first()->type)->toEqual(TestEvent::Created->value);
 });
 
 it('filters with whereData scope with array', function () {

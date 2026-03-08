@@ -7,7 +7,6 @@ use AaronFrancis\Eventable\EventTypeRegistry;
 use AaronFrancis\Eventable\Models\Event;
 use AaronFrancis\Eventable\PruneableEventDiscovery;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 
 class PruneEventsCommand extends Command
 {
@@ -26,7 +25,8 @@ class PruneEventsCommand extends Command
         }
 
         $eventModel = config('eventable.model', Event::class);
-        $table = (new $eventModel)->getTable();
+        $eventModelInstance = new $eventModel;
+        $table = $eventModelInstance->getTable();
 
         $pruned = 0;
 
@@ -50,7 +50,7 @@ class PruneEventsCommand extends Command
                     continue;
                 }
 
-                $query = DB::table($table)
+                $query = $eventModelInstance->newQuery()
                     ->where('type_class', $typeClass)
                     ->where('type', $case->value);
 
@@ -63,7 +63,7 @@ class PruneEventsCommand extends Command
 
                     $partitionBy = implode(', ', $partitionBy);
 
-                    $ranked = DB::table($table)
+                    $ranked = $eventModelInstance->newQuery()
                         // Limit to only the enum we're currently working on.
                         ->where('type_class', $typeClass)
                         ->where('type', $case->value)

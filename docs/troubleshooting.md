@@ -76,10 +76,12 @@ enum EventType: int implements PruneableEvent
 **Check the event type value:**
 
 ```php
-// Make sure you're using the enum, not a string
+// Safest: use the enum so Eventable also scopes the registered alias
 $user->events()->ofType(EventType::LoggedIn)->get();  // Correct
 $user->events()->ofType('LoggedIn')->get();           // Wrong
-$user->events()->ofType(1)->get();                    // Works (raw value)
+
+// Raw values work, but only filter the type column
+$user->events()->ofTypeClass('user')->ofType(1)->get();
 ```
 
 **Check the model scope:**
@@ -148,6 +150,17 @@ Schema::create('events', function (Blueprint $table) {
 ```
 
 Or modify the published migration before running it.
+
+### UUID/ULID models fail to relate events
+
+The published migration uses Laravel's default morph key type. If your models use UUIDs or ULIDs, configure that before running the migration:
+
+```php
+use Illuminate\Support\Facades\Schema;
+
+Schema::morphUsingUuids();
+// or Schema::morphUsingUlids();
+```
 
 ## Performance Issues
 
@@ -273,5 +286,5 @@ Relation::morphMap([
 
 1. **Check the tests** — The package has comprehensive tests showing expected behavior
 2. **Enable query logging** — Use `DB::enableQueryLog()` to see what queries are running
-3. **Check your Laravel version** — Eventable requires Laravel 10, 11, or 12
+3. **Check your Laravel version** — Eventable requires Laravel 11 or 12
 4. **Open an issue** — [GitHub Issues](https://github.com/aarondfrancis/eventable/issues)

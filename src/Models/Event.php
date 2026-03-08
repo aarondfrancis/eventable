@@ -2,6 +2,8 @@
 
 namespace AaronFrancis\Eventable\Models;
 
+use AaronFrancis\Eventable\EventTypeRegistry;
+use BackedEnum;
 use Carbon\Unit;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -27,15 +29,22 @@ class Event extends Model
     | Scopes
     |--------------------------------------------------------------------------
     */
-    public function scopeOfType(Builder $query, $type): void
+    public function scopeOfType(Builder $query, mixed $type): void
     {
-        if (is_object($type) && enum_exists($type::class)) {
-            $type = $type->value;
+        if ($type instanceof BackedEnum) {
+            $query->where('type_class', EventTypeRegistry::getAlias($type))
+                ->where('type', $type->value);
+
+            return;
         }
 
-        is_array($type)
-            ? $query->whereIn('type', $type)
-            : $query->where('type', $type);
+        if (is_array($type)) {
+            $this->applyTypeArrayFilter($query, $type);
+
+            return;
+        }
+
+        $query->where('type', $type);
     }
 
     public function scopeOfTypeClass(Builder $query, string $typeClass): void
@@ -43,14 +52,14 @@ class Event extends Model
         $query->where('type_class', $typeClass);
     }
 
-    public function scopeWhereData(Builder $query, $data = null): void
+    public function scopeWhereData(Builder $query, mixed $data = null): void
     {
-        if (empty($data)) {
+        if ($data === null || $data === []) {
             return;
         }
 
         if (! is_array($data)) {
-            $query->where('data', json_encode($data));
+            $this->whereEntireJsonValue($query, $data);
 
             return;
         }
@@ -124,6 +133,46 @@ class Event extends Model
     protected function happened(Builder $query, Carbon $time, bool $before = true): void
     {
         $query->where('created_at', $before ? '<' : '>', $time->copy()->setTimezone('UTC'));
+    }
+
+    protected function applyTypeArrayFilter(Builder $query, array $types): void
+    {
+        $enumTypes = array_filter($types, fn (mixed $type) => $type instanceof BackedEnum);
+
+        if ($enumTypes === []) {
+            $query->whereIn('type', $types);
+
+            return;
+        }
+
+        if (count($enumTypes) !== count($types)) {
+            throw new \InvalidArgumentException('ofType() expects either raw values or BackedEnum cases from the same enum.');
+        }
+
+        $firstEnum = reset($enumTypes);
+        $enumClass = $firstEnum::class;
+
+        foreach ($enumTypes as $enumType) {
+            if ($enumType::class !== $enumClass) {
+                throw new \InvalidArgumentException('ofType() cannot mix enum classes in the same array.');
+            }
+        }
+
+        $query->where('type_class', EventTypeRegistry::getAlias($enumClass))
+            ->whereIn('type', array_map(fn (BackedEnum $type) => $type->value, $enumTypes));
+    }
+
+    protected function whereEntireJsonValue(Builder $query, mixed $data): void
+    {
+        $encoded = json_encode($data);
+        $column = $query->getQuery()->getGrammar()->wrap($this->qualifyColumn('data'));
+
+        match ($query->getConnection()->getDriverName()) {
+            'mysql' => $query->whereRaw("{$column} = CAST(? AS JSON)", [$encoded]),
+            'pgsql' => $query->whereRaw("({$column})::jsonb = ?::jsonb", [$encoded]),
+            'sqlite' => $query->whereRaw("json({$column}) = json(?)", [$encoded]),
+            default => $query->where('data', $encoded),
+        };
     }
 
     /*

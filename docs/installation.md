@@ -75,6 +75,8 @@ Register it in `config/eventable.php`:
 
 > **Note:** Both int-backed and string-backed enums are supported. The default migration uses a `string` column for the `type` field. If you prefer an integer column for int-backed enums, customize the migration before running it.
 
+> **UUID/ULID models:** The published migration respects Laravel's default morph key type. If your app uses UUIDs or ULIDs for polymorphic keys, call `Schema::morphUsingUuids()` or `Schema::morphUsingUlids()` before running the migration.
+
 ## (Recommended) Enforce a Morph Map
 
 Since Eventable uses polymorphic relationships, we highly recommend using Laravel's [Enforced Morph Map](https://laravel.com/docs/eloquent-relationships#custom-polymorphic-types) to avoid storing full class names in the database:

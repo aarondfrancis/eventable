@@ -256,13 +256,16 @@ public function scopeOfType(Builder $query, $type): void
 ```
 
 **Parameters:**
-- `$type` — An enum case, enum value, or array of values
+- `$type` — An enum case, a raw enum value, or an array of enum cases/raw values
+
+**Note:** Passing a `BackedEnum` also filters by its registered alias. Raw values only filter the `type` column, so combine them with `ofTypeClass()` if multiple enums share the same values.
 
 **Examples:**
 ```php
 Event::ofType(EventType::OrderPlaced)->get();
-Event::ofType(1)->get();
-Event::ofType([1, 2, 3])->get();
+Event::ofTypeClass('order')->ofType(1)->get();
+Event::ofType([EventType::OrderPlaced, EventType::OrderShipped])->get();
+Event::ofTypeClass('order')->ofType([1, 2, 3])->get();
 ```
 
 #### scopeOfTypeClass()

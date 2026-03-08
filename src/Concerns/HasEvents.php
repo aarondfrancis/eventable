@@ -30,7 +30,6 @@ trait HasEvents
     public function hasEvent(BackedEnum $event, array $data = []): bool
     {
         return $this->events()
-            ->where('type_class', EventTypeRegistry::getAlias($event))
             ->ofType($event)
             ->whereData($data)
             ->exists();
@@ -38,11 +37,13 @@ trait HasEvents
 
     public function latestEvent(?BackedEnum $type = null): ?Event
     {
-        $query = $this->events()->latest();
+        $query = $this->events()
+            ->reorder()
+            ->orderByDesc('created_at')
+            ->orderByDesc('id');
 
         if ($type !== null) {
-            $query->where('type_class', EventTypeRegistry::getAlias($type))
-                ->ofType($type);
+            $query->ofType($type);
         }
 
         return $query->first();
@@ -50,11 +51,13 @@ trait HasEvents
 
     public function firstEvent(?BackedEnum $type = null): ?Event
     {
-        $query = $this->events()->oldest();
+        $query = $this->events()
+            ->reorder()
+            ->orderBy('created_at')
+            ->orderBy('id');
 
         if ($type !== null) {
-            $query->where('type_class', EventTypeRegistry::getAlias($type))
-                ->ofType($type);
+            $query->ofType($type);
         }
 
         return $query->first();
@@ -65,8 +68,7 @@ trait HasEvents
         $query = $this->events();
 
         if ($type !== null) {
-            $query->where('type_class', EventTypeRegistry::getAlias($type))
-                ->ofType($type);
+            $query->ofType($type);
         }
 
         return $query->count();
@@ -89,34 +91,33 @@ trait HasEvents
 
     public function scopeWhereEventHasHappenedTimes(Builder $query, BackedEnum $event, int $count, array $data = []): void
     {
-        $typeClass = EventTypeRegistry::getAlias($event);
-
-        $query->whereHas('events', function ($events) use ($event, $data, $typeClass) {
-            $events->where('type_class', $typeClass)->ofType($event)->whereData($data);
+        $query->whereHas('events', function ($events) use ($event, $data) {
+            $events->ofType($event)->whereData($data);
         }, '=', $count);
     }
 
     public function scopeWhereEventHasHappenedAtLeast(Builder $query, BackedEnum $event, int $count, array $data = []): void
     {
-        $typeClass = EventTypeRegistry::getAlias($event);
-
-        $query->whereHas('events', function ($events) use ($event, $data, $typeClass) {
-            $events->where('type_class', $typeClass)->ofType($event)->whereData($data);
+        $query->whereHas('events', function ($events) use ($event, $data) {
+            $events->ofType($event)->whereData($data);
         }, '>=', $count);
     }
 
     public function scopeWhereLatestEventIs(Builder $query, BackedEnum $event): void
     {
-        $eventModel = config('eventable.model', Event::class);
-        $table = (new $eventModel)->getTable();
         $typeClass = EventTypeRegistry::getAlias($event);
 
-        $query->whereHas('events', function ($events) use ($event, $table, $typeClass) {
+        $query->whereHas('events', function ($events) use ($event, $typeClass) {
+            $table = $events->getModel()->getTable();
+
             $events->where('id', function ($sub) use ($table) {
-                $sub->selectRaw('MAX(id)')
-                    ->from($table.' as e2')
+                $sub->from($table.' as e2')
+                    ->select('id')
                     ->whereColumn('e2.eventable_id', $table.'.eventable_id')
-                    ->whereColumn('e2.eventable_type', $table.'.eventable_type');
+                    ->whereColumn('e2.eventable_type', $table.'.eventable_type')
+                    ->orderByDesc('e2.created_at')
+                    ->orderByDesc('e2.id')
+                    ->limit(1);
             })
                 ->where('type_class', $typeClass)
                 ->where('type', $event->value);
@@ -126,10 +127,9 @@ trait HasEvents
     protected function queryEventExistence(Builder $query, BackedEnum $event, array $data, bool $hasHappened = true): void
     {
         $method = $hasHappened ? 'whereHas' : 'whereDoesntHave';
-        $typeClass = EventTypeRegistry::getAlias($event);
 
-        $query->$method('events', function ($events) use ($event, $data, $typeClass) {
-            return $events->where('type_class', $typeClass)->ofType($event)->whereData($data);
+        $query->$method('events', function ($events) use ($event, $data) {
+            return $events->ofType($event)->whereData($data);
         });
     }
 

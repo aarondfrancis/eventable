@@ -58,8 +58,14 @@ Use `ofType()` to filter by event type:
 // Single type
 $user->events()->ofType(EventType::OrderPlaced)->get();
 
-// Multiple types (pass an array of values)
+// Multiple types from the same enum
 $user->events()->ofType([
+    EventType::OrderPlaced,
+    EventType::OrderShipped,
+])->get();
+
+// Raw values stay available when you also scope the enum alias
+$user->events()->ofTypeClass('order')->ofType([
     EventType::OrderPlaced->value,
     EventType::OrderShipped->value,
 ])->get();
