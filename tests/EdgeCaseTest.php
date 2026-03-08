@@ -65,8 +65,19 @@ it('adds event with complex nested data', function () {
     $event = $model->addEvent(TestEvent::Updated, $complexData);
 
     $freshEvent = Event::find($event->id);
+    $sortRecursive = function (array $value) use (&$sortRecursive): array {
+        foreach ($value as $key => $item) {
+            if (is_array($item)) {
+                $value[$key] = $sortRecursive($item);
+            }
+        }
 
-    expect($freshEvent->data)->toBe($complexData);
+        ksort($value);
+
+        return $value;
+    };
+
+    expect($sortRecursive($freshEvent->data))->toEqual($sortRecursive($complexData));
     expect($freshEvent->data['user']['profile']['name'])->toBe('John Doe');
 });
 

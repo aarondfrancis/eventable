@@ -26,6 +26,7 @@ class PruneEventsCommand extends Command
 
         $eventModel = config('eventable.model', Event::class);
         $eventModelInstance = new $eventModel;
+        $connection = $eventModelInstance->getConnection();
         $table = $eventModelInstance->getTable();
 
         $pruned = 0;
@@ -58,7 +59,9 @@ class PruneEventsCommand extends Command
                     $partitionBy = ['eventable_id', 'eventable_type'];
 
                     if ($prune->varyOnData) {
-                        $partitionBy[] = 'data';
+                        $partitionBy[] = $connection->getDriverName() === 'pgsql'
+                            ? '(data::jsonb)'
+                            : 'data';
                     }
 
                     $partitionBy = implode(', ', $partitionBy);
