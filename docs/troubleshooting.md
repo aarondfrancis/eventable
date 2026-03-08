@@ -6,24 +6,15 @@ Common issues and their solutions.
 
 ### Migration fails with "table already exists"
 
-If you've published the migration multiple times:
-
-```bash
-# Check for duplicate migrations
-ls -la database/migrations/*events*
-
-# Remove duplicates, keeping only one
-rm database/migrations/2024_01_01_000001_create_events_table.php
-```
+This usually means the migration was published more than once. Check your `database/migrations` directory and keep a single `create_events_table` migration.
 
 ### Class not found errors
 
-Ensure the service provider is registered. Laravel should auto-discover it, but you can manually add it:
+Laravel should auto-discover the service provider. If auto-discovery is disabled, register it manually:
 
 ```php
 // config/app.php
 'providers' => [
-    // ...
     AaronFrancis\Eventable\EventableServiceProvider::class,
 ],
 ```
@@ -32,7 +23,7 @@ Ensure the service provider is registered. Laravel should auto-discover it, but 
 
 ### "Event enum [X] is not registered"
 
-All event enums must be registered in `config/eventable.php`:
+Register every enum in `config/eventable.php`:
 
 ```php
 'event_types' => [
@@ -41,21 +32,20 @@ All event enums must be registered in `config/eventable.php`:
 ],
 ```
 
-The alias (e.g., `'user'`) is stored in the database's `type_class` column.
+The alias is stored in `type_class`, so registration is required before `addEvent()` can resolve the enum.
 
 ### Pruning command fails with "No PruneableEvent enums found"
 
-Ensure your enum is both registered in `config/eventable.php` AND implements `PruneableEvent`.
+Make sure the enum is both:
+- registered in `config/eventable.php`
+- implementing `PruneableEvent`
 
 ### Pruning doesn't delete anything
 
-Your enum must implement `PruneableEvent`:
+Your enum case must return a non-null `PruneConfig`:
 
 ```php
-use AaronFrancis\Eventable\Contracts\PruneableEvent;
-use AaronFrancis\Eventable\PruneConfig;
-
-enum EventType: int implements PruneableEvent
+enum UserEvent: int implements PruneableEvent
 {
     case LoggedIn = 1;
 
@@ -63,7 +53,7 @@ enum EventType: int implements PruneableEvent
     {
         return match ($this) {
             self::LoggedIn => new PruneConfig(keep: 5),
-            default => null,  // Return null to skip pruning
+            default => null,
         };
     }
 }
@@ -73,87 +63,90 @@ enum EventType: int implements PruneableEvent
 
 ### Events not found when querying
 
-**Check the event type value:**
+Use enum cases whenever possible:
 
 ```php
-// Safest: use the enum so Eventable also scopes the registered alias
-$user->events()->ofType(EventType::LoggedIn)->get();  // Correct
-$user->events()->ofType('LoggedIn')->get();           // Wrong
+$user->events()->ofType(UserEvent::LoggedIn)->get();
+```
 
-// Raw values work, but only filter the type column
+Raw values only filter the `type` column:
+
+```php
 $user->events()->ofTypeClass('user')->ofType(1)->get();
 ```
 
-**Check the model scope:**
+If multiple enums share the same backing values, using raw values without `ofTypeClass()` can match the wrong rows.
 
-Events are scoped to the model type. A User's events won't appear in Order queries:
+### Event query hits the wrong model type
+
+Model scopes are always limited to the current model type:
 
 ```php
-// This only searches User events
-User::whereEventHasHappened(EventType::Created)->get();
+User::whereEventHasHappened(UserEvent::Created)->get();
+Order::whereEventHasHappened(OrderEvent::Created)->get();
 ```
+
+If your results look wrong, verify you are querying the expected parent model class.
 
 ### whereData() not matching
 
-The `whereData()` scope uses JSON column queries. Ensure your data structure matches exactly:
+Array payloads must match the stored JSON structure:
 
 ```php
-// If you stored this:
-$user->addEvent(EventType::Updated, ['field' => 'name', 'value' => 'John']);
+$user->addEvent(UserEvent::Updated, ['field' => 'name', 'value' => 'John']);
 
-// This will match:
-$user->events()->whereData(['field' => 'name'])->get();
-
-// This won't match (different structure):
-$user->events()->whereData(['name' => 'John'])->get();
+$user->events()->whereData(['field' => 'name'])->get(); // Matches
+$user->events()->whereData(['name' => 'John'])->get();  // Does not match
 ```
 
-For nested data, use the same nesting:
+Nested data must keep the same nesting:
 
 ```php
-// Stored:
-$user->addEvent(EventType::Order, ['payment' => ['method' => 'card']]);
+$user->addEvent(UserEvent::OrderPlaced, ['payment' => ['method' => 'card']]);
 
-// Query:
 $user->events()->whereData(['payment' => ['method' => 'card']])->get();
+```
+
+Scalar values are matched exactly:
+
+```php
+$user->addEvent(UserEvent::RetryCountUpdated, 0);
+
+$user->events()->whereData(0)->get();   // Matches
+$user->events()->whereData('0')->get(); // Different JSON value
 ```
 
 ### Time-based queries return unexpected results
 
-All time scopes convert to UTC before querying. By default, they use your app's timezone from `config('app.timezone')`:
+Time scopes convert timestamps to UTC before querying and use your app timezone by default:
 
 ```php
-// Uses app timezone
 Event::happenedToday()->get();
 Event::happenedThisWeek()->get();
 
-// Override with a specific timezone
 Event::happenedToday('America/New_York')->get();
 Event::happenedThisWeek('Europe/Paris')->get();
-
-// For explicit control, use happenedAfter/happenedBefore
-Event::happenedAfter(now()->startOfDay())->get();
 ```
 
-## String Enums
+### Latest-event queries seem off
+
+`latestEvent()` and `whereLatestEventIs()` both order by:
+- newest `created_at`
+- highest `id` as the tie-breaker
+
+If you backfill historical events, make sure `created_at` reflects the event time you want to query against.
+
+## String Enums and Morph Keys
 
 ### "Data too long for column 'type'"
 
-If using string-backed enums, your migration needs a string column:
+The published migration already uses a string column for `type`. This error usually means the migration was customized to use an integer column.
 
-```php
-// In your migration
-Schema::create('events', function (Blueprint $table) {
-    $table->string('type');  // Not integer!
-    // ...
-});
-```
-
-Or modify the published migration before running it.
+If you want string-backed enums, `type` must remain a string column.
 
 ### UUID/ULID models fail to relate events
 
-The published migration uses Laravel's default morph key type. If your models use UUIDs or ULIDs, configure that before running the migration:
+The migration uses Laravel's default morph key type. Configure UUIDs or ULIDs before you run the migration:
 
 ```php
 use Illuminate\Support\Facades\Schema;
@@ -166,59 +159,45 @@ Schema::morphUsingUuids();
 
 ### Slow queries on large tables
 
-Add indexes for your common query patterns:
+Start with the built-in indexes from the published migration, then add database-specific indexes for your common patterns:
 
 ```php
-// Additional indexes beyond the defaults
 Schema::table('events', function (Blueprint $table) {
-    // If you frequently query by data fields
-    $table->index([DB::raw('(JSON_EXTRACT(data, "$.order_id"))')]);
-
-    // If you query specific event types often
     $table->index(['type', 'eventable_type', 'created_at']);
 });
 ```
 
+JSON indexing is database-specific:
+- MySQL usually needs generated columns or functional indexes
+- PostgreSQL often benefits from `jsonb` expression or GIN indexes
+- SQLite JSON indexing options are more limited
+
 ### N+1 queries when loading events
 
-Eager load events to avoid N+1:
+Eager load the relationship:
 
 ```php
-// Instead of this (N+1):
-$users = User::all();
-foreach ($users as $user) {
-    $user->events;  // Triggers a query each time
-}
-
-// Do this:
 $users = User::with('events')->get();
 
-// Or with constraints:
 $users = User::with(['events' => function ($query) {
-    $query->ofType(EventType::LoggedIn)->latest()->limit(5);
+    $query->ofType(UserEvent::LoggedIn)->latest('created_at')->limit(5);
 }])->get();
 ```
 
 ### Too many events slowing down queries
 
-Use pruning to manage event volume:
+Use pruning to limit table growth:
 
 ```php
 public function prune(): ?PruneConfig
 {
     return match ($this) {
-        // Keep only recent events
         self::PageViewed => new PruneConfig(keep: 10),
-
-        // Delete old events
         self::LoggedIn => new PruneConfig(before: now()->subMonths(3)),
-
-        // Combine both strategies
         self::ApiCalled => new PruneConfig(
             before: now()->subDays(30),
-            keep: 100
+            keep: 100,
         ),
-
         default => null,
     };
 }
@@ -227,7 +206,6 @@ public function prune(): ?PruneConfig
 Schedule pruning to run regularly:
 
 ```php
-// routes/console.php or app/Console/Kernel.php
 Schedule::command('eventable:prune')->daily();
 ```
 
@@ -235,17 +213,13 @@ Schedule::command('eventable:prune')->daily();
 
 ### Custom model not being used
 
-Ensure your config is set correctly:
+Set the custom class in `config/eventable.php` and extend the base model:
 
 ```php
-// config/eventable.php
 return [
     'model' => App\Models\Event::class,
-    // ...
 ];
 ```
-
-And your custom model extends the base:
 
 ```php
 namespace App\Models;
@@ -258,33 +232,24 @@ class Event extends BaseEvent
 }
 ```
 
+The configured model is also used by `eventable:prune`.
+
 ### Relationship returns wrong model type
 
-If `$event->eventable` returns the wrong type, check your morph map:
+Check your morph maps:
 
 ```php
-// config/eventable.php
 return [
     'register_morph_map' => true,
     'morph_alias' => 'event',
-    // ...
 ];
 ```
 
-Or register your own morph map in a service provider:
-
-```php
-use Illuminate\Database\Eloquent\Relations\Relation;
-
-Relation::morphMap([
-    'user' => App\Models\User::class,
-    'order' => App\Models\Order::class,
-]);
-```
+If your own eventable models use aliases, make sure those aliases are registered in your application too.
 
 ## Still Having Issues?
 
-1. **Check the tests** — The package has comprehensive tests showing expected behavior
-2. **Enable query logging** — Use `DB::enableQueryLog()` to see what queries are running
-3. **Check your Laravel version** — Eventable requires Laravel 11 or 12
-4. **Open an issue** — [GitHub Issues](https://github.com/aarondfrancis/eventable/issues)
+1. Check the tests for working examples.
+2. Enable query logging with `DB::enableQueryLog()`.
+3. Confirm your Laravel version is 11.x or 12.24+.
+4. Open an issue at [GitHub Issues](https://github.com/aarondfrancis/eventable/issues).

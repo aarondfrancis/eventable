@@ -2,7 +2,7 @@
 
 ## HasEvents Trait
 
-Add to any Eloquent model to enable event tracking.
+Add `HasEvents` to any Eloquent model to enable event tracking.
 
 ```php
 use AaronFrancis\Eventable\Concerns\HasEvents;
@@ -13,622 +13,343 @@ class User extends Model
 }
 ```
 
-### Methods
+### Instance Methods
 
 #### addEvent()
-
-Record an event on the model.
 
 ```php
 public function addEvent(BackedEnum $event, mixed $data = null): Event
 ```
 
-**Parameters:**
-- `$event` — A backed enum case representing the event type
-- `$data` — Optional data to attach (array, scalar, or any JSON-serializable value)
+Record an event on the model.
 
-**Returns:** The created `Event` model instance
-
-**Example:**
-```php
-$event = $user->addEvent(EventType::OrderPlaced, ['order_id' => 123]);
-```
+Parameters:
+- `$event`: the enum case to store
+- `$data`: optional JSON-serializable array or scalar payload
 
 #### events()
-
-Get the events relationship.
 
 ```php
 public function events(): MorphMany
 ```
 
-**Returns:** A `MorphMany` relationship to the Event model
-
-**Example:**
-```php
-$user->events;           // Collection of events
-$user->events()->get();  // Same, via query builder
-```
+Get the model's `MorphMany` relationship to the configured Event model.
 
 #### hasEvent()
-
-Check if the model has a specific event.
 
 ```php
 public function hasEvent(BackedEnum $event, array $data = []): bool
 ```
 
-**Parameters:**
-- `$event` — The event type to check for
-- `$data` — Optional data constraints
+Check whether the model has a matching event.
 
-**Example:**
-```php
-$user->hasEvent(EventType::EmailVerified); // true or false
-$user->hasEvent(EventType::OrderPlaced, ['currency' => 'USD']);
-```
+Parameters:
+- `$event`: the enum case to look for
+- `$data`: optional JSON fragment to match
+
+Note: `hasEvent()` accepts array fragments. For scalar payload matching, use `$model->events()->whereData(...)`.
 
 #### latestEvent()
-
-Get the most recent event.
 
 ```php
 public function latestEvent(?BackedEnum $type = null): ?Event
 ```
 
-**Parameters:**
-- `$type` — Optional event type filter
+Get the latest event overall or the latest event of a specific type.
 
-**Example:**
-```php
-$user->latestEvent();                       // Latest event of any type
-$user->latestEvent(EventType::OrderPlaced); // Latest order event
-```
+Ordering:
+- `created_at desc`
+- `id desc`
 
 #### firstEvent()
-
-Get the oldest event.
 
 ```php
 public function firstEvent(?BackedEnum $type = null): ?Event
 ```
 
-**Parameters:**
-- `$type` — Optional event type filter
+Get the oldest event overall or the oldest event of a specific type.
 
-**Example:**
-```php
-$user->firstEvent();                       // First event of any type
-$user->firstEvent(EventType::UserLoggedIn); // First login event
-```
+Ordering:
+- `created_at asc`
+- `id asc`
 
 #### eventCount()
-
-Count events for the model.
 
 ```php
 public function eventCount(?BackedEnum $type = null): int
 ```
 
-**Parameters:**
-- `$type` — Optional event type filter
-
-**Example:**
-```php
-$user->eventCount();                      // Total event count
-$user->eventCount(EventType::PageViewed); // Count of page views
-```
+Count all events or just events of a specific type.
 
 ### Model Scopes
 
 #### scopeWhereEventHasHappened()
 
-Find models that have a specific event.
-
 ```php
 public function scopeWhereEventHasHappened(Builder $query, BackedEnum $event, array $data = []): void
 ```
 
-**Parameters:**
-- `$event` — The event type to check for
-- `$data` — Optional data constraints
-
-**Example:**
-```php
-User::whereEventHasHappened(EventType::OrderPlaced)->get();
-User::whereEventHasHappened(EventType::OrderPlaced, ['total' => 100])->get();
-```
+Filter models that have at least one matching event.
 
 #### scopeWhereEventHasntHappened()
-
-Find models that don't have a specific event.
 
 ```php
 public function scopeWhereEventHasntHappened(Builder $query, BackedEnum $event, array $data = []): void
 ```
 
-**Parameters:**
-- `$event` — The event type to check for absence
-- `$data` — Optional data constraints
-
-**Example:**
-```php
-User::whereEventHasntHappened(EventType::EmailVerified)->get();
-```
+Filter models that do not have a matching event.
 
 #### scopeWhereEventHasHappenedTimes()
-
-Find models with exactly N occurrences of an event.
 
 ```php
 public function scopeWhereEventHasHappenedTimes(Builder $query, BackedEnum $event, int $count, array $data = []): void
 ```
 
-**Parameters:**
-- `$event` — The event type to count
-- `$count` — Exact number of occurrences
-- `$data` — Optional data constraints
-
-**Example:**
-```php
-User::whereEventHasHappenedTimes(EventType::OrderPlaced, 3)->get();
-User::whereEventHasHappenedTimes(EventType::OrderPlaced, 2, ['currency' => 'USD'])->get();
-```
+Filter models with exactly `$count` matching events.
 
 #### scopeWhereEventHasHappenedAtLeast()
-
-Find models with at least N occurrences of an event.
 
 ```php
 public function scopeWhereEventHasHappenedAtLeast(Builder $query, BackedEnum $event, int $count, array $data = []): void
 ```
 
-**Parameters:**
-- `$event` — The event type to count
-- `$count` — Minimum number of occurrences
-- `$data` — Optional data constraints
-
-**Example:**
-```php
-User::whereEventHasHappenedAtLeast(EventType::UserLoggedIn, 5)->get();
-User::whereEventHasHappenedAtLeast(EventType::OrderPlaced, 3, ['currency' => 'USD'])->get();
-```
+Filter models with at least `$count` matching events.
 
 #### scopeWhereLatestEventIs()
-
-Find models whose most recent event is a specific type.
 
 ```php
 public function scopeWhereLatestEventIs(Builder $query, BackedEnum $event): void
 ```
 
-**Parameters:**
-- `$event` — The event type to match
+Filter models whose latest event matches the given enum case.
 
-**Example:**
-```php
-User::whereLatestEventIs(EventType::Subscribed)->get();
-User::whereLatestEventIs(EventType::Churned)->get();
-```
-
----
+Ordering:
+- `created_at desc`
+- `id desc`
 
 ## Event Model
 
-The `AaronFrancis\Eventable\Models\Event` model stores individual events.
+`AaronFrancis\Eventable\Models\Event` stores individual events.
 
-### Properties
+### Core Properties
 
 | Property | Type | Description |
 |----------|------|-------------|
 | `id` | `int` | Primary key |
-| `type_class` | `string` | The registered enum alias |
-| `type` | `int\|string` | The enum value |
-| `eventable_id` | `int` | Parent model ID |
-| `eventable_type` | `string` | Parent model class |
-| `data` | `array\|null` | JSON data (auto-cast) |
-| `created_at` | `Carbon` | When the event occurred |
-| `updated_at` | `Carbon` | Last update time |
+| `type_class` | `string` | Registered enum alias |
+| `type` | `int\|string` | Enum backing value |
+| `eventable_id` | `int\|string` | Parent model key |
+| `eventable_type` | `string` | Parent model morph type |
+| `data` | `mixed` | JSON array or scalar payload |
+| `created_at` | `Carbon` | Event timestamp |
+| `updated_at` | `Carbon` | Updated timestamp |
 
 ### Relationships
 
 #### eventable()
 
-Get the parent model.
-
 ```php
 public function eventable(): MorphTo
 ```
 
-**Example:**
-```php
-$event->eventable; // Returns the User, Order, etc.
-```
+Resolve the parent model.
 
 ### Query Scopes
 
 #### scopeOfType()
 
-Filter events by type.
-
 ```php
-public function scopeOfType(Builder $query, $type): void
+public function scopeOfType(Builder $query, mixed $type): void
 ```
 
-**Parameters:**
-- `$type` — An enum case, a raw enum value, or an array of enum cases/raw values
+Accepted inputs:
+- a `BackedEnum` case
+- a raw backing value
+- an array of enum cases from the same enum class
+- an array of raw values
 
-**Note:** Passing a `BackedEnum` also filters by its registered alias. Raw values only filter the `type` column, so combine them with `ofTypeClass()` if multiple enums share the same values.
-
-**Examples:**
-```php
-Event::ofType(EventType::OrderPlaced)->get();
-Event::ofTypeClass('order')->ofType(1)->get();
-Event::ofType([EventType::OrderPlaced, EventType::OrderShipped])->get();
-Event::ofTypeClass('order')->ofType([1, 2, 3])->get();
-```
+Behavior:
+- `BackedEnum` cases filter by both `type_class` and `type`
+- raw values filter only `type`
+- arrays cannot mix enum cases and raw values
+- arrays of enum cases cannot mix enum classes
 
 #### scopeOfTypeClass()
-
-Filter events by their registered enum alias.
 
 ```php
 public function scopeOfTypeClass(Builder $query, string $typeClass): void
 ```
 
-**Parameters:**
-- `$typeClass` — The enum alias as registered in `config/eventable.php`
-
-**Example:**
-```php
-Event::ofTypeClass('user')->get(); // All events from the 'user' enum
-```
+Filter by registered enum alias.
 
 #### scopeWhereData()
 
-Filter events by data content.
-
 ```php
-public function scopeWhereData(Builder $query, $data = null): void
+public function scopeWhereData(Builder $query, mixed $data = null): void
 ```
 
-**Parameters:**
-- `$data` — Array of key-value pairs, or a scalar value
+Accepted inputs:
+- `null` or `[]` for no additional filtering
+- array fragments for JSON matching
+- scalar JSON values for exact matching
 
-**Examples:**
+Examples:
+
 ```php
 Event::whereData(['order_id' => 123])->get();
 Event::whereData(['payment' => ['method' => 'card']])->get();
 Event::whereData('admin_reset')->get();
+Event::whereData(false)->get();
+Event::whereData(0)->get();
 ```
 
 #### scopeHappenedAfter()
-
-Filter events after a specific time.
 
 ```php
 public function scopeHappenedAfter(Builder $query, Carbon $time): void
 ```
 
-**Example:**
-```php
-Event::happenedAfter(now()->subDays(7))->get();
-```
+Strictly greater than the given timestamp.
 
 #### scopeHappenedBefore()
-
-Filter events before a specific time.
 
 ```php
 public function scopeHappenedBefore(Builder $query, Carbon $time): void
 ```
 
-**Example:**
-```php
-Event::happenedBefore(now()->subMonth())->get();
-```
+Strictly less than the given timestamp.
 
 #### scopeHappenedBetween()
-
-Filter events within a date range.
 
 ```php
 public function scopeHappenedBetween(Builder $query, Carbon $start, Carbon $end): void
 ```
 
-**Parameters:**
-- `$start` — Start of the date range (exclusive)
-- `$end` — End of the date range (exclusive)
-
-**Example:**
-```php
-Event::happenedBetween(
-    Carbon::parse('2024-01-01'),
-    Carbon::parse('2024-01-31')
-)->get();
-```
+Exclusive on both ends.
 
 #### scopeHappenedToday()
-
-Filter events from today.
 
 ```php
 public function scopeHappenedToday(Builder $query, ?string $timezone = null): void
 ```
 
-**Parameters:**
-- `$timezone` — Optional timezone (defaults to `config('app.timezone')`)
-
-**Example:**
-```php
-Event::happenedToday()->get();
-Event::happenedToday('America/Chicago')->get();
-Event::ofType(UserEvent::PageViewed)->happenedToday()->count();
-```
+Filter events from the current day in the given timezone or the app timezone.
 
 #### scopeHappenedThisWeek()
-
-Filter events from the current week (starts Monday).
 
 ```php
 public function scopeHappenedThisWeek(Builder $query, ?string $timezone = null): void
 ```
 
-**Parameters:**
-- `$timezone` — Optional timezone (defaults to `config('app.timezone')`)
-
-**Example:**
-```php
-Event::happenedThisWeek()->get();
-Event::happenedThisWeek('Europe/London')->get();
-Event::ofType(UserEvent::Purchase)->happenedThisWeek()->count();
-```
+Filter events since the start of the current week.
 
 #### scopeHappenedThisMonth()
-
-Filter events from the current month.
 
 ```php
 public function scopeHappenedThisMonth(Builder $query, ?string $timezone = null): void
 ```
 
-**Parameters:**
-- `$timezone` — Optional timezone (defaults to `config('app.timezone')`)
-
-**Example:**
-```php
-Event::happenedThisMonth()->get();
-Event::happenedThisMonth('Asia/Tokyo')->get();
-Event::ofType(UserEvent::LoggedIn)->happenedThisMonth()->count();
-```
+Filter events since the start of the current month.
 
 #### scopeHappenedInTheLast()
-
-Filter events that happened within the last N units of time.
 
 ```php
 public function scopeHappenedInTheLast(Builder $query, int $value, Unit|string $unit): void
 ```
 
-**Parameters:**
-- `$value` — Number of time units
-- `$unit` — Carbon `Unit` enum or string: `Unit::Day`, `Unit::Hour`, `Unit::Week`, `Unit::Month`, `Unit::Year`, etc.
-
-**Examples:**
-```php
-use Carbon\Unit;
-
-Event::happenedInTheLast(7, Unit::Day)->get();
-Event::happenedInTheLast(24, Unit::Hour)->get();
-Event::happenedInTheLast(3, Unit::Month)->get();
-
-// Strings also work
-Event::happenedInTheLast(7, 'days')->get();
-```
+Filter events in the last N units.
 
 #### scopeHasntHappenedInTheLast()
-
-Filter events that happened BEFORE the last N units of time (older than).
 
 ```php
 public function scopeHasntHappenedInTheLast(Builder $query, int $value, Unit|string $unit): void
 ```
 
-**Parameters:**
-- `$value` — Number of time units
-- `$unit` — Carbon `Unit` enum or string: `Unit::Day`, `Unit::Hour`, `Unit::Week`, `Unit::Month`, `Unit::Year`, etc.
-
-**Examples:**
-```php
-use Carbon\Unit;
-
-Event::hasntHappenedInTheLast(30, Unit::Day)->get();  // Events older than 30 days
-Event::hasntHappenedInTheLast(6, Unit::Month)->get(); // Events older than 6 months
-```
-
----
-
-## PruneConfig
-
-Configuration for event pruning.
-
-```php
-use AaronFrancis\Eventable\PruneConfig;
-```
-
-### Constructor
-
-```php
-public function __construct(
-    public ?Carbon $before = null,
-    public int $keep = 0,
-    public bool $varyOnData = true
-)
-```
-
-**Parameters:**
-- `$before` — Delete events older than this date
-- `$keep` — Number of recent events to keep per model
-- `$varyOnData` — Whether to count events with different data separately
-
-**Examples:**
-```php
-new PruneConfig(before: now()->subDays(30));
-new PruneConfig(keep: 5);
-new PruneConfig(keep: 10, varyOnData: false);
-new PruneConfig(before: now()->subDays(90), keep: 20);
-```
-
----
-
-## PruneableEvent Interface
-
-Implement on your event enum to enable pruning.
-
-```php
-use AaronFrancis\Eventable\Contracts\PruneableEvent;
-```
-
-### Methods
-
-#### prune()
-
-Return the prune configuration for this event type.
-
-```php
-public function prune(): ?PruneConfig;
-```
-
-**Returns:** A `PruneConfig` instance, or `null` to skip pruning
-
-**Example:**
-```php
-enum EventType: int implements PruneableEvent
-{
-    case PageViewed = 1;
-    case OrderPlaced = 2;
-
-    public function prune(): ?PruneConfig
-    {
-        return match ($this) {
-            self::PageViewed => new PruneConfig(keep: 10),
-            self::OrderPlaced => null,
-        };
-    }
-}
-```
-
----
-
-## Artisan Commands
-
-### eventable:prune
-
-Prune old events based on retention policies.
-
-```bash
-php artisan eventable:prune [--dry-run]
-```
-
-**Options:**
-- `--dry-run` — Preview what would be deleted without actually deleting
-
-**Examples:**
-```bash
-php artisan eventable:prune --dry-run
-php artisan eventable:prune
-```
-
----
+Filter events older than N units.
 
 ## EventTypeRegistry
 
-The `AaronFrancis\Eventable\EventTypeRegistry` class manages event enum registration.
-
-### Static Methods
+`EventTypeRegistry` maps aliases to enum classes.
 
 #### register()
-
-Manually register an event enum (useful for testing).
 
 ```php
 public static function register(string $alias, string $enumClass): void
 ```
 
-**Example:**
-```php
-EventTypeRegistry::register('user', App\Enums\UserEvent::class);
-```
-
-#### getAlias()
-
-Get the alias for an event enum.
-
-```php
-public static function getAlias(string|BackedEnum $enum): string
-```
-
-**Example:**
-```php
-$alias = EventTypeRegistry::getAlias(UserEvent::LoggedIn); // 'user'
-$alias = EventTypeRegistry::getAlias(UserEvent::class);    // 'user'
-```
-
-#### getClass()
-
-Get the enum class for an alias.
-
-```php
-public static function getClass(string $alias): string
-```
-
-**Example:**
-```php
-$class = EventTypeRegistry::getClass('user'); // App\Enums\UserEvent::class
-```
-
-#### isRegistered()
-
-Check if an enum is registered.
-
-```php
-public static function isRegistered(string|BackedEnum $enum): bool
-```
-
-#### hasAlias()
-
-Check if an alias exists.
-
-```php
-public static function hasAlias(string $alias): bool
-```
-
-#### all()
-
-Get all registered event types (config + manual).
-
-```php
-public static function all(): array
-```
+Register an alias manually.
 
 #### clear()
-
-Clear all manual registrations (config registrations remain).
 
 ```php
 public static function clear(): void
 ```
 
----
+Clear manual registrations.
 
-## Configuration
+#### all()
 
-Located at `config/eventable.php`:
+```php
+public static function all(): array
+```
 
-| Key | Type | Default | Description |
-|-----|------|---------|-------------|
-| `table` | `string` | `'events'` | Database table name |
-| `model` | `string` | `Event::class` | Event model class |
-| `event_types` | `array` | `[]` | Event enum aliases (required) |
-| `register_morph_map` | `bool` | `true` | Register in morph map |
-| `morph_alias` | `string` | `'event'` | Morph map alias |
+Return config-defined aliases merged with manual registrations.
+
+#### getAlias()
+
+```php
+public static function getAlias(string|BackedEnum $enum): string
+```
+
+Resolve the alias for an enum class or enum case.
+
+#### getClass()
+
+```php
+public static function getClass(string $alias): string
+```
+
+Resolve the enum class for an alias.
+
+#### isRegistered()
+
+```php
+public static function isRegistered(string|BackedEnum $enum): bool
+```
+
+Check whether an enum class or case is registered.
+
+#### hasAlias()
+
+```php
+public static function hasAlias(string $alias): bool
+```
+
+Check whether an alias exists.
+
+## Pruning Contracts
+
+### PruneableEvent
+
+Implement on an enum to opt into pruning:
+
+```php
+public function prune(): ?PruneConfig;
+```
+
+Return `null` to skip pruning for that event case.
+
+### PruneConfig
+
+```php
+public function __construct(
+    public ?Carbon $before = null,
+    public int $keep = 0,
+    public bool $varyOnData = true,
+)
+```
+
+Properties:
+- `before`: delete rows older than this timestamp
+- `keep`: keep the newest N rows per model
+- `varyOnData`: when `keep` is used, partition by stored JSON payload as well

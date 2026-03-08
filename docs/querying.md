@@ -1,79 +1,51 @@
 # Querying Events
 
-Eventable provides powerful query scopes for filtering events.
+Eventable gives you query helpers on both the parent model and the Event model.
 
 ## Helper Methods
 
-Quick access to common event information on a model instance.
-
-### Check if an Event Exists
+Quick access to common event information on a model instance:
 
 ```php
-// Check if the model has a specific event
-$user->hasEvent(EventType::EmailVerified); // true or false
-
-// Check with data matching
-$user->hasEvent(EventType::OrderPlaced, ['currency' => 'USD']);
-```
-
-### Get Latest Event
-
-```php
-// Get the most recent event of any type
+$user->hasEvent(UserEvent::EmailVerified);
 $user->latestEvent();
-
-// Get the most recent event of a specific type
-$user->latestEvent(EventType::OrderPlaced);
+$user->latestEvent(UserEvent::OrderPlaced);
+$user->firstEvent(UserEvent::Registered);
+$user->eventCount();
+$user->eventCount(UserEvent::PageViewed);
 ```
 
-### Get First Event
-
-```php
-// Get the oldest event of any type
-$user->firstEvent();
-
-// Get the oldest event of a specific type
-$user->firstEvent(EventType::UserLoggedIn);
-```
-
-### Count Events
-
-```php
-// Count all events
-$user->eventCount(); // 42
-
-// Count events of a specific type
-$user->eventCount(EventType::PageViewed); // 15
-```
-
----
+`latestEvent()` and `whereLatestEventIs()` use the same ordering: newest `created_at`, then highest `id`.
 
 ## Querying a Model's Events
 
 ### Filter by Type
 
-Use `ofType()` to filter by event type:
+Use `ofType()` to filter a model's events:
 
 ```php
-// Single type
-$user->events()->ofType(EventType::OrderPlaced)->get();
+// Single enum case
+$user->events()->ofType(UserEvent::OrderPlaced)->get();
 
-// Multiple types from the same enum
+// Multiple cases from the same enum
 $user->events()->ofType([
-    EventType::OrderPlaced,
-    EventType::OrderShipped,
+    UserEvent::OrderPlaced,
+    UserEvent::OrderShipped,
 ])->get();
 
-// Raw values stay available when you also scope the enum alias
-$user->events()->ofTypeClass('order')->ofType([
-    EventType::OrderPlaced->value,
-    EventType::OrderShipped->value,
-])->get();
+// Raw values when you also know the alias
+$user->events()->ofTypeClass('user')->ofType([5, 6])->get();
 ```
+
+Rules for `ofType()`:
+- Passing a `BackedEnum` filters by both `type_class` and `type`
+- Arrays of enum cases must all come from the same enum class
+- Raw values only filter `type`
+- If multiple enums reuse the same backing values, pair raw values with `ofTypeClass()`
 
 ### Filter by Data
 
-Use `whereData()` to filter by event data:
+Use `whereData()` to filter by stored JSON:
 
 ```php
 // Match specific key-value pairs
@@ -84,50 +56,38 @@ $user->events()->whereData([
     'payment' => ['method' => 'credit_card'],
 ])->get();
 
-// Match scalar data
+// Match scalar values exactly
 $user->events()->whereData('admin_reset')->get();
+$user->events()->whereData(false)->get();
+$user->events()->whereData(0)->get();
+$user->events()->whereData('0')->get();
 ```
 
-The `whereData()` scope uses JSON column queries, so you can match any part of the stored data.
+Arrays are matched as JSON fragments. Scalars are matched as exact JSON values.
 
 ### Filter by Time
 
-Use time-based scopes to filter by when events occurred:
+Use the built-in time scopes:
 
 ```php
-// Events after a specific time
-$user->events()->happenedAfter(now()->subDays(7))->get();
-
-// Events before a specific time
-$user->events()->happenedBefore(now()->subMonth())->get();
-
-// Events in the last N units (use Carbon\Unit enum)
 use Carbon\Unit;
 
+$user->events()->happenedAfter(now()->subDays(7))->get();
+$user->events()->happenedBefore(now()->subMonth())->get();
 $user->events()->happenedInTheLast(7, Unit::Day)->get();
 $user->events()->happenedInTheLast(24, Unit::Hour)->get();
-$user->events()->happenedInTheLast(3, Unit::Month)->get();
-
-// Events older than N units
 $user->events()->hasntHappenedInTheLast(30, Unit::Day)->get();
-
-// Combine for a date range
-$user->events()
-    ->happenedAfter(now()->subDays(30))
-    ->happenedBefore(now()->subDays(7))
-    ->get();
 ```
 
-These scopes handle timezone conversion automatically.
+These scopes convert timestamps to UTC before querying.
 
-### Date Range Queries
+### Date Ranges
 
-Use `happenedBetween()` for date range queries:
+Use `happenedBetween()` for an explicit range:
 
 ```php
 use Illuminate\Support\Carbon;
 
-// Events in a specific range
 $user->events()
     ->happenedBetween(
         Carbon::parse('2024-01-01'),
@@ -136,156 +96,107 @@ $user->events()
     ->get();
 ```
 
+`happenedBetween()` is exclusive on both ends.
+
 ### Convenience Date Scopes
 
-Quick filters for common time periods:
-
 ```php
-// Events from today
 Event::happenedToday()->get();
-
-// Events from this week (starts Monday)
 Event::happenedThisWeek()->get();
-
-// Events from this month
 Event::happenedThisMonth()->get();
 
-// Chain with other scopes
 $user->events()
     ->ofType(UserEvent::PageViewed)
     ->happenedToday()
     ->get();
 ```
 
-### Timezone Support
-
-Date scopes accept an optional timezone parameter. All times are converted to UTC for querying:
+You can also pass a timezone:
 
 ```php
-// Use app timezone (default)
-Event::happenedToday()->get();
-
-// Override with specific timezone
 Event::happenedToday('America/Chicago')->get();
 Event::happenedThisWeek('Europe/London')->get();
 Event::happenedThisMonth('Asia/Tokyo')->get();
 ```
 
-This is useful when your users are in different timezones and you need "today" to mean their local day, not the server's.
-
 ### Chaining Scopes
 
-Combine multiple scopes for complex queries:
+Combine scopes for more targeted queries:
 
 ```php
 $recentLargeOrders = $user->events()
-    ->ofType(EventType::OrderPlaced)
+    ->ofType(UserEvent::OrderPlaced)
     ->whereData(['currency' => 'USD'])
     ->happenedAfter(now()->subDays(30))
     ->where('data->total', '>', 100)
-    ->latest()
+    ->latest('created_at')
     ->get();
 ```
 
 ## Querying Models by Events
 
-Find models based on their event history using model-level scopes.
+Find parent models from their event history.
 
-### Find Models With an Event
+### Models With or Without an Event
 
 ```php
-// Users who have logged in
-User::whereEventHasHappened(EventType::UserLoggedIn)->get();
-
-// Users who have placed orders
-User::whereEventHasHappened(EventType::OrderPlaced)->get();
+User::whereEventHasHappened(UserEvent::LoggedIn)->get();
+User::whereEventHasntHappened(UserEvent::EmailVerified)->get();
 ```
 
-### Find Models Without an Event
+### Match Event Data
+
+Model scopes accept array fragments for data matching:
 
 ```php
-// Users who haven't verified their email
-User::whereEventHasntHappened(EventType::EmailVerified)->get();
-
-// Users who haven't logged in
-User::whereEventHasntHappened(EventType::UserLoggedIn)->get();
-```
-
-### With Data Matching
-
-Pass a second argument to match specific data:
-
-```php
-// Users who placed orders over $100
-User::whereEventHasHappened(EventType::OrderPlaced, [
-    'total' => 100,
+User::whereEventHasHappened(UserEvent::OrderPlaced, [
+    'currency' => 'USD',
 ])->get();
 
-// Users who haven't used a specific coupon
-User::whereEventHasntHappened(EventType::OrderPlaced, [
+User::whereEventHasntHappened(UserEvent::OrderPlaced, [
     'coupon_code' => 'SUMMER20',
 ])->get();
 ```
 
-### Find Models by Event Count
+### Event Counts
 
 ```php
-// Users who have exactly 3 logins
-User::whereEventHasHappenedTimes(EventType::UserLoggedIn, 3)->get();
-
-// Users who have at least 5 orders
-User::whereEventHasHappenedAtLeast(EventType::OrderPlaced, 5)->get();
-
-// With data matching
-User::whereEventHasHappenedTimes(EventType::OrderPlaced, 2, ['currency' => 'USD'])->get();
-User::whereEventHasHappenedAtLeast(EventType::OrderPlaced, 3, ['currency' => 'USD'])->get();
+User::whereEventHasHappenedTimes(UserEvent::LoggedIn, 3)->get();
+User::whereEventHasHappenedAtLeast(UserEvent::OrderPlaced, 5)->get();
 ```
 
-### Find Models by Latest Event
+### Latest Event
 
 ```php
-// Users whose most recent event is "Subscribed"
-User::whereLatestEventIs(EventType::Subscribed)->get();
-
-// Users whose most recent event is "Churned"
-User::whereLatestEventIs(EventType::Churned)->get();
+User::whereLatestEventIs(UserEvent::Subscribed)->get();
+User::whereLatestEventIs(UserEvent::Churned)->get();
 ```
 
-### Combining with Other Query Conditions
+That latest-event check uses the same `created_at desc, id desc` ordering as `latestEvent()`.
 
-These scopes work with any other Eloquent query methods:
+### Combine With Normal Eloquent Conditions
 
 ```php
-// Active premium users who haven't verified email
 User::where('status', 'active')
     ->where('plan', 'premium')
-    ->whereEventHasntHappened(EventType::EmailVerified)
+    ->whereEventHasntHappened(UserEvent::EmailVerified)
     ->get();
 
-// Recently registered users who have made a purchase
 User::where('created_at', '>', now()->subDays(7))
-    ->whereEventHasHappened(EventType::OrderPlaced)
-    ->get();
-
-// Power users with at least 10 logins this month
-User::where('plan', 'pro')
-    ->whereEventHasHappenedAtLeast(EventType::UserLoggedIn, 10)
+    ->whereEventHasHappened(UserEvent::OrderPlaced)
     ->get();
 ```
 
 ## Accessing the Parent Model
 
-From an Event, access the parent model via the `eventable` relationship:
+From an Event, access the related model through `eventable`:
 
 ```php
 $event = Event::find(1);
 
-// Get the parent model
-$user = $event->eventable;
-
-// Works with any eventable model
-echo $event->eventable_type; // "App\Models\User"
-echo $event->eventable_id;   // 123
+$parent = $event->eventable;
+echo $event->eventable_type; // Morph alias or class name
+echo $event->eventable_id;
 ```
 
 ## Raw Queries on Events
@@ -295,13 +206,11 @@ You can query the Event model directly:
 ```php
 use AaronFrancis\Eventable\Models\Event;
 
-// All order events across all users
-Event::ofType(EventType::OrderPlaced)
+Event::ofType(UserEvent::OrderPlaced)
     ->happenedAfter(now()->subDays(7))
     ->count();
 
-// Group by type
-Event::selectRaw('type, count(*) as count')
-    ->groupBy('type')
+Event::selectRaw('type_class, type, count(*) as count')
+    ->groupBy('type_class', 'type')
     ->get();
 ```

@@ -1,10 +1,10 @@
 # Pruning Events
 
-Over time, your events table can grow large. Eventable provides a pruning system to automatically clean up old events based on configurable retention policies.
+Eventable can automatically delete old events based on per-event retention rules.
 
 ## Setting Up Pruning
 
-Implement `PruneableEvent` on your registered event enum:
+Implement `PruneableEvent` on a registered event enum:
 
 ```php
 <?php
@@ -14,9 +14,9 @@ namespace App\Enums;
 use AaronFrancis\Eventable\Contracts\PruneableEvent;
 use AaronFrancis\Eventable\PruneConfig;
 
-enum EventType: int implements PruneableEvent
+enum UserEvent: int implements PruneableEvent
 {
-    case UserLoggedIn = 1;
+    case LoggedIn = 1;
     case PasswordChanged = 2;
     case OrderPlaced = 3;
     case PageViewed = 4;
@@ -24,119 +24,108 @@ enum EventType: int implements PruneableEvent
     public function prune(): ?PruneConfig
     {
         return match ($this) {
-            // Keep only the last 5 login events per user
-            self::UserLoggedIn => new PruneConfig(keep: 5),
-
-            // Delete page views older than 30 days
+            self::LoggedIn => new PruneConfig(keep: 5),
             self::PageViewed => new PruneConfig(before: now()->subDays(30)),
-
-            // Don't prune these events
             self::PasswordChanged, self::OrderPlaced => null,
         };
     }
 }
 ```
 
+Return `null` to skip pruning for a case.
+
 ## PruneConfig Options
 
-The `PruneConfig` class accepts three parameters:
+`PruneConfig` accepts three options.
 
 ### before
 
-Delete events older than this date:
+Delete events older than a given date:
 
 ```php
-// Delete events older than 30 days
 new PruneConfig(before: now()->subDays(30))
-
-// Delete events older than 1 year
 new PruneConfig(before: now()->subYear())
 ```
 
 ### keep
 
-Keep the N most recent events per model:
+Keep the newest N events per model:
 
 ```php
-// Keep the last 5 events of this type per model
 new PruneConfig(keep: 5)
-
-// Keep the last 100 events
 new PruneConfig(keep: 100)
 ```
 
+When `keep` is used, Eventable defines "newest" as `created_at desc`, then `id desc`.
+
 ### varyOnData
 
-When using `keep`, whether to count events with different data separately. Defaults to `true`.
+When `keep` is used, `varyOnData` controls whether different payloads are counted separately. It defaults to `true`.
 
 ```php
-// Keep last 3 events, treating different data as separate groups
 new PruneConfig(keep: 3, varyOnData: true)
-
-// Keep last 3 events total, regardless of data
 new PruneConfig(keep: 3, varyOnData: false)
 ```
 
-**Example with varyOnData:**
-
-If a user has these events:
-- `PageViewed` with `{page: 'home'}` (5 events)
-- `PageViewed` with `{page: 'about'}` (3 events)
+Example:
+- `PageViewed` with `{page: 'home'}` recorded 5 times
+- `PageViewed` with `{page: 'about'}` recorded 3 times
 
 With `varyOnData: true` and `keep: 3`:
-- Keeps 3 most recent `{page: 'home'}` events
-- Keeps all 3 `{page: 'about'}` events
+- Keep the 3 newest `home` events
+- Keep the 3 `about` events
 
 With `varyOnData: false` and `keep: 3`:
-- Keeps only the 3 most recent events total
+- Keep only the 3 newest `PageViewed` events total
+
+Internally, Eventable partitions by model and stored JSON payload before applying the keep limit.
 
 ### Combining Options
 
-You can combine `before` and `keep`:
+You can combine age-based and count-based retention:
 
 ```php
-// Keep the last 10 events, but also delete anything older than 90 days
 new PruneConfig(
     before: now()->subDays(90),
-    keep: 10
+    keep: 10,
 )
 ```
 
 ## Running the Prune Command
 
-### Preview (Dry Run)
-
-See what would be deleted without actually deleting:
+### Preview With `--dry-run`
 
 ```bash
 php artisan eventable:prune --dry-run
 ```
 
-Output:
-```
-Event UserLoggedIn: 1,234 records to prune.
+Example output:
+
+```text
+Event LoggedIn: 1,234 records to prune.
 Event PageViewed: 45,678 records to prune.
 Total: 46,912 records would be pruned.
 ```
 
-### Execute
-
-Actually delete the events:
+### Execute the Prune
 
 ```bash
 php artisan eventable:prune
 ```
 
-Output:
-```
-Event UserLoggedIn: 1,234 records pruned.
+Example output:
+
+```text
+Event LoggedIn: 1,234 records pruned.
 Event PageViewed: 45,678 records pruned.
 Total: 46,912 records pruned.
 ```
 
+The command resolves through your configured Event model and uses that model's connection.
+
 ## Scheduling Pruning
 
-Add the prune command to your scheduler in `routes/console.php`:
+Add the command to your scheduler:
 
 ```php
 use Illuminate\Support\Facades\Schedule;
@@ -144,17 +133,14 @@ use Illuminate\Support\Facades\Schedule;
 Schedule::command('eventable:prune')->daily();
 ```
 
-### Recommended Schedule
-
-- **Daily** — Good for most applications
-- **Hourly** — If you have high event volume
-- **Weekly** — If events are rarely pruned
+Typical schedules:
+- Daily for most applications
+- Hourly for high-volume event streams
+- Weekly if retention windows are long and churn is low
 
 ## Retention Strategies
 
 ### Keep Forever
-
-Return `null` to never prune an event type:
 
 ```php
 self::OrderPlaced => null,
@@ -163,39 +149,24 @@ self::PasswordChanged => null,
 
 ### Time-Based Retention
 
-Delete events older than a specific age:
-
 ```php
-// Low-value events: 7 days
 self::PageViewed => new PruneConfig(before: now()->subDays(7)),
-
-// Medium-value events: 90 days
-self::UserLoggedIn => new PruneConfig(before: now()->subDays(90)),
-
-// High-value events: 1 year
+self::LoggedIn => new PruneConfig(before: now()->subDays(90)),
 self::OrderShipped => new PruneConfig(before: now()->subYear()),
 ```
 
 ### Count-Based Retention
 
-Keep only the N most recent events:
-
 ```php
-// Keep last 10 login events per user
-self::UserLoggedIn => new PruneConfig(keep: 10),
-
-// Keep last 50 page views per user
+self::LoggedIn => new PruneConfig(keep: 10),
 self::PageViewed => new PruneConfig(keep: 50),
 ```
 
 ### Hybrid Retention
 
-Combine time and count limits:
-
 ```php
-// Keep last 20 events, but nothing older than 30 days
-self::UserLoggedIn => new PruneConfig(
+self::LoggedIn => new PruneConfig(
     before: now()->subDays(30),
-    keep: 20
+    keep: 20,
 ),
 ```

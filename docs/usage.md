@@ -2,43 +2,46 @@
 
 ## Recording Events
 
-Use the `addEvent()` method to record an event on any model with the `Eventable` trait:
+Use `addEvent()` on any model with the `HasEvents` trait:
 
 ```php
-$user->addEvent(EventType::LoggedIn);
+$user->addEvent(UserEvent::LoggedIn);
 ```
 
 ### With Additional Data
 
-Pass an array or any JSON-serializable value as the second argument:
+Pass an array as the second argument to store structured JSON data:
 
 ```php
-$user->addEvent(EventType::OrderPlaced, [
+$user->addEvent(UserEvent::OrderPlaced, [
     'order_id' => 123,
     'total' => 99.99,
     'items' => ['SKU-001', 'SKU-002'],
 ]);
 ```
 
-The data is stored as JSON and can be queried later.
-
 ### Scalar Data
 
-You can also store simple scalar values:
+You can also store scalar JSON values:
 
 ```php
-$user->addEvent(EventType::PasswordChanged, 'admin_reset');
+$user->addEvent(UserEvent::PasswordChanged, 'admin_reset');
+$user->addEvent(UserEvent::PasswordResetRequested, false);
+$user->addEvent(UserEvent::RetryCountUpdated, 0);
 ```
+
+Eventable can later match those scalar values exactly through `whereData()`, including `false`, `0`, `'0'`, and `''`.
 
 ### Return Value
 
 `addEvent()` returns the created Event model instance:
 
 ```php
-$event = $user->addEvent(EventType::LoggedIn);
+$event = $user->addEvent(UserEvent::LoggedIn);
 
 echo $event->id;         // The event ID
-echo $event->type;       // The enum value (e.g., 1)
+echo $event->type_class; // The registered enum alias
+echo $event->type;       // The enum value
 echo $event->created_at; // When it happened
 ```
 
@@ -54,7 +57,7 @@ $user->events;
 
 // As a query builder
 $user->events()->count();
-$user->events()->latest()->first();
+$user->events()->latest('created_at')->first();
 ```
 
 ### Eager Loading
@@ -64,9 +67,8 @@ Eager load events to avoid N+1 queries:
 ```php
 $users = User::with('events')->get();
 
-// With constraints
 $users = User::with(['events' => function ($query) {
-    $query->ofType(EventType::OrderPlaced)->latest();
+    $query->ofType(UserEvent::OrderPlaced)->latest('created_at');
 }])->get();
 ```
 
@@ -81,70 +83,95 @@ Create a backed enum for type-safe event definitions:
 
 namespace App\Enums;
 
-enum EventType: int
+enum UserEvent: int
 {
-    case UserRegistered = 1;
-    case UserLoggedIn = 2;
+    case Registered = 1;
+    case LoggedIn = 2;
     case PasswordChanged = 3;
-    case EmailVerified = 4;
-    case OrderPlaced = 5;
-    case OrderShipped = 6;
-    case OrderDelivered = 7;
+    case PasswordResetRequested = 4;
+    case RetryCountUpdated = 5;
+    case EmailVerified = 6;
+    case OrderPlaced = 7;
+    case AddressChanged = 8;
+    case Created = 9;
 }
 ```
 
 ### Registering Event Types
 
-**Required:** Register all enums in `config/eventable.php`:
+Register all enums in `config/eventable.php`:
 
 ```php
 'event_types' => [
-    'user' => App\Enums\EventType::class,
+    'user' => App\Enums\UserEvent::class,
     'order' => App\Enums\OrderEvent::class,
 ],
 ```
 
-This enables multiple enums with the same values (e.g., `UserEvent::Created = 1` and `OrderEvent::Created = 1`) and allows refactoring class names without breaking existing data.
+This is required. Eventable stores the alias in `type_class` and the backing value in `type`, which enables:
+- Overlapping enum values without collisions
+- Alias-aware `ofType(BackedEnum)` queries
+- Safe enum refactors without rewriting historical rows
 
 ### Using String-Backed Enums
 
 String enums work too:
 
 ```php
-enum EventType: string
+enum UserEvent: string
 {
-    case UserRegistered = 'user.registered';
-    case UserLoggedIn = 'user.logged_in';
+    case Registered = 'user.registered';
+    case LoggedIn = 'user.logged_in';
     case OrderPlaced = 'order.placed';
 }
 ```
 
-Note: If you use string enums, make sure your `events` table has a `VARCHAR` column for `type` instead of an integer.
+The published migration already uses a string column for `type`, so string-backed enums work out of the box.
+
+### Overlapping Enum Values Stay Isolated
+
+Different enums can safely reuse the same backing values:
+
+```php
+enum UserEvent: int
+{
+    case Created = 1;
+}
+
+enum OrderEvent: int
+{
+    case Created = 1;
+}
+
+$user->addEvent(UserEvent::Created);
+$order->addEvent(OrderEvent::Created);
+
+$user->events()->ofType(UserEvent::Created)->count();   // 1
+$order->events()->ofType(OrderEvent::Created)->count(); // 1
+```
 
 ## Event Data Best Practices
 
 ### Structure Your Data
 
-Use consistent data structures for each event type:
+Use a consistent payload shape for a given event type:
 
 ```php
-// Good: Consistent structure
-$user->addEvent(EventType::AddressChanged, [
+$user->addEvent(UserEvent::AddressChanged, [
     'field' => 'shipping_address',
     'old' => $oldAddress,
     'new' => $newAddress,
 ]);
-
-// Avoid: Inconsistent structures make querying harder
-$user->addEvent(EventType::AddressChanged, $newAddress);
 ```
+
+Avoid swapping between unrelated payload formats for the same event type.
 
 ### Include Context
 
-Store enough context to understand the event later:
+Store enough context to understand the event later without loading the full source model:
 
 ```php
-$user->addEvent(EventType::OrderPlaced, [
+$user->addEvent(UserEvent::OrderPlaced, [
     'order_id' => $order->id,
     'total' => $order->total,
     'currency' => $order->currency,
@@ -155,49 +182,45 @@ $user->addEvent(EventType::OrderPlaced, [
 
 ### Avoid Large Payloads
 
-Don't store entire models — store references and key data:
+Prefer references and key facts over entire serialized models:
 
 ```php
-// Good: Store references
-$user->addEvent(EventType::OrderPlaced, [
+// Good
+$user->addEvent(UserEvent::OrderPlaced, [
     'order_id' => $order->id,
     'total' => $order->total,
 ]);
 
-// Avoid: Don't store entire models
-$user->addEvent(EventType::OrderPlaced, $order->toArray());
+// Avoid
+$user->addEvent(UserEvent::OrderPlaced, $order->toArray());
 ```
 
 ## Polymorphic Relationships
 
-Eventable uses Laravel's polymorphic relationships to store events. This means:
+Eventable stores events through Laravel's polymorphic relationships.
 
 ### Events Are Isolated by Model Type
 
-Each model type has its own separate event history:
+Each model type has its own event history:
 
 ```php
 $user = User::find(1);
-$order = Order::find(1);  // Same ID, different model
+$order = Order::find(1); // Same ID, different model
 
-$user->addEvent(EventType::Created);
-$order->addEvent(EventType::Created);
+$user->addEvent(UserEvent::Created);
+$order->addEvent(OrderEvent::Created);
 
-// Each model only sees its own events
-$user->events;  // 1 event (User's)
-$order->events; // 1 event (Order's)
+$user->events;  // User events only
+$order->events; // Order events only
 ```
 
 ### Querying Across Model Types
 
-Query scopes are automatically scoped to the model type:
+Model scopes are automatically limited to the current model type:
 
 ```php
-// Only finds Users with this event, not Orders
-User::whereEventHasHappened(EventType::Created)->get();
-
-// Only finds Orders with this event, not Users
-Order::whereEventHasHappened(EventType::Created)->get();
+User::whereEventHasHappened(UserEvent::Created)->get();
+Order::whereEventHasHappened(OrderEvent::Created)->get();
 ```
 
 ### Accessing the Parent Model
@@ -208,13 +231,13 @@ From an Event, you can access the parent model:
 $event = Event::first();
 
 $event->eventable;      // Returns the User, Order, etc.
-$event->eventable_type; // "App\Models\User"
-$event->eventable_id;   // 123
+$event->eventable_type; // Morph alias or class name
+$event->eventable_id;   // Parent key
 ```
 
 ### Multiple Models, Same Enum
 
-You can use the same event enum across different models:
+You can use the same enum across multiple models:
 
 ```php
 enum ActivityType: int
@@ -224,7 +247,6 @@ enum ActivityType: int
     case Archived = 3;
 }
 
-// Works on any model with the Eventable trait
 $user->addEvent(ActivityType::Created);
 $order->addEvent(ActivityType::Created);
 $product->addEvent(ActivityType::Archived);
@@ -252,16 +274,13 @@ enum UserActivity: int implements PruneableEvent
     }
 }
 
-// Record login with context
 $user->addEvent(UserActivity::LoggedIn, [
     'ip' => request()->ip(),
     'user_agent' => request()->userAgent(),
-    'location' => $geoip->getLocation(),
 ]);
 
-// Find users who logged in today
 User::whereEventHasHappened(UserActivity::LoggedIn)
-    ->whereHas('events', fn($q) => $q->happenedToday())
+    ->whereHas('events', fn ($q) => $q->happenedToday())
     ->get();
 ```
 
@@ -277,33 +296,26 @@ enum OrderEvent: int
     case Refunded = 5;
 }
 
-// Track order lifecycle
 $order->addEvent(OrderEvent::Placed, ['total' => 99.99]);
 $order->addEvent(OrderEvent::Paid, ['method' => 'credit_card']);
 $order->addEvent(OrderEvent::Shipped, ['tracking' => 'ABC123']);
 
-// Check order status
-if ($order->hasEvent(OrderEvent::Shipped) && !$order->hasEvent(OrderEvent::Delivered)) {
+if ($order->hasEvent(OrderEvent::Shipped) && ! $order->hasEvent(OrderEvent::Delivered)) {
     // Order is in transit
 }
 
-// Find orders by their latest status
-Order::whereLatestEventIs(OrderEvent::Shipped)->get();  // In transit
-Order::whereLatestEventIs(OrderEvent::Refunded)->get(); // Refunded
+// "Latest" means newest created_at, then highest id.
+Order::whereLatestEventIs(OrderEvent::Shipped)->get();
 ```
 
 ### Subscription Management
 
 ```php
-// Find active subscribers (latest event is "Subscribed")
 User::whereLatestEventIs(SubscriptionEvent::Subscribed)->get();
-
-// Find churned users
 User::whereLatestEventIs(SubscriptionEvent::Cancelled)->get();
 
-// Find power users with 10+ logins this month
 User::whereEventHasHappenedAtLeast(UserActivity::LoggedIn, 10)
-    ->whereHas('events', fn($q) => $q
+    ->whereHas('events', fn ($q) => $q
         ->ofType(UserActivity::LoggedIn)
         ->happenedThisMonth()
     )

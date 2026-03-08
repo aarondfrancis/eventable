@@ -6,7 +6,16 @@
 [![PHP Version](https://img.shields.io/packagist/php-v/aaronfrancis/eventable.svg?style=flat-square)](https://packagist.org/packages/aaronfrancis/eventable)
 [![License](https://img.shields.io/packagist/l/aaronfrancis/eventable.svg?style=flat-square)](https://packagist.org/packages/aaronfrancis/eventable)
 
-A Laravel package for tracking events on Eloquent models using polymorphic relationships.
+A Laravel package for tracking events on Eloquent models with polymorphic relationships, backed enums, and query helpers for both individual event records and parent models.
+
+Eventable stores both a registered enum alias in `type_class` and the enum backing value in `type`. That keeps overlapping enum values safe across multiple event enums and lets you rename enum classes without breaking historical data.
+
+Highlights:
+- Works with int-backed and string-backed enums
+- Stores array payloads and exact scalar JSON values
+- Lets you query models by event history
+- Supports pruning by age, count, or both
+- Tested in CI on SQLite, MySQL 8, PostgreSQL 17, and PostgreSQL 18
 
 ```php
 // Add the trait to your User model
@@ -39,9 +48,9 @@ php artisan vendor:publish --tag=eventable-migrations
 php artisan migrate
 ```
 
-## Setup
+## Quick Start
 
-**1. Add the trait to your models:**
+### 1. Add the trait to your models
 
 ```php
 use AaronFrancis\Eventable\Concerns\HasEvents;
@@ -52,7 +61,7 @@ class User extends Model
 }
 ```
 
-**2. Create a backed enum for your event types:**
+### 2. Create a backed enum for your event types
 
 ```php
 enum UserEvent: int
@@ -63,14 +72,13 @@ enum UserEvent: int
     case Churned = 4;
     case Purchase = 5;
     case PageViewed = 6;
+    case PasswordResetRequested = 7;
 }
 ```
 
-> **Note:** Both int-backed and string-backed enums are supported. The default migration uses a `string` column for the `type` field. If you prefer an integer column for int-backed enums, customize the migration before running it.
->
-> **UUID/ULID models:** The published migration uses Laravel's default morph key type. If your app uses UUIDs or ULIDs for polymorphic keys, call `Schema::morphUsingUuids()` or `Schema::morphUsingUlids()` before running the migration.
+The published migration uses a `string` column for `type`, so int-backed and string-backed enums both work out of the box. If you customize the migration to use an integer column, string-backed enums will no longer fit.
 
-**3. Register your enum in `config/eventable.php`:**
+### 3. Register your enum in `config/eventable.php`
 
 ```php
 'event_types' => [
@@ -78,13 +86,16 @@ enum UserEvent: int
 ],
 ```
 
-This registration is required and enables:
-- Multiple enums without value collisions (e.g., both `UserEvent::Created = 1` and `OrderEvent::Created = 1`)
-- Refactoring class names without breaking existing data
+This registration is required. It enables:
+- Multiple enums without value collisions, such as `UserEvent::Created = 1` and `OrderEvent::Created = 1`
+- Alias-aware queries when you pass a `BackedEnum` to `ofType()`
+- Refactoring enum class names without breaking stored records
 
-**4. (Recommended) Enforce a morph map:**
+### 4. Review morph key and morph map setup
 
-Since Eventable uses polymorphic relationships, we highly recommend using Laravel's [Enforced Morph Map](https://laravel.com/docs/eloquent-relationships#custom-polymorphic-types) to avoid storing full class names in the database:
+The published migration uses `morphs('eventable')`, so it follows Laravel's default morph key type. If your app uses UUIDs or ULIDs for polymorphic keys, call `Schema::morphUsingUuids()` or `Schema::morphUsingUlids()` before running the migration.
+
+Since Eventable uses polymorphic relationships, it is also a good idea to use Laravel's [enforced morph map](https://laravel.com/docs/eloquent-relationships#custom-polymorphic-types) for your own models:
 
 ```php
 // In AppServiceProvider::boot()
@@ -96,23 +107,24 @@ Relation::enforceMorphMap([
 ]);
 ```
 
-That's it! You're ready to start tracking events.
+Eventable separately registers its own Event model in Laravel's morph map when `eventable.register_morph_map` is enabled.
 
-## Usage
-
-### Recording Events
+## Recording Events
 
 ```php
 $user->addEvent(UserEvent::LoggedIn);
 
-// With additional data
 $user->addEvent(UserEvent::Purchase, [
     'order_id' => 123,
     'total' => 99.99,
 ]);
+
+$user->addEvent(UserEvent::PasswordResetRequested, false);
 ```
 
-### Helper Methods
+The second argument can be an array or any JSON-serializable scalar value. Exact scalar matching works for values like `false`, `0`, `'0'`, and `''`.
+
+## Helper Methods
 
 ```php
 // Check if an event exists
@@ -130,7 +142,9 @@ $user->eventCount(); // all events
 $user->eventCount(UserEvent::LoggedIn); // by type
 ```
 
-### Querying a Model's Events
+`latestEvent()` and `whereLatestEventIs()` use the same definition of "latest": newest `created_at`, with `id` as the tie-breaker.
+
+## Querying a Model's Events
 
 ```php
 // Get all events for a model
@@ -139,8 +153,12 @@ $user->events;
 // Filter by type
 $user->events()->ofType(UserEvent::LoggedIn)->get();
 
+// Filter by raw values when you also know the alias
+$user->events()->ofTypeClass('user')->ofType([1, 5])->get();
+
 // Filter by data
 $user->events()->whereData(['order_id' => 123])->get();
+$user->events()->whereData(false)->get();
 
 // Time-based queries
 $user->events()->happenedAfter(now()->subDays(7))->get();
@@ -155,9 +173,9 @@ $user->events()->happenedThisMonth()->get();
 $user->events()->happenedToday('America/Chicago')->get();
 ```
 
-### Querying Models by Event Criteria
+Raw values only filter the `type` column. If multiple enums can share the same backing values, pair raw values with `ofTypeClass()` or use an enum case directly.
 
-Combine scopes for complex queries using `whereHas`:
+## Querying Models by Event Criteria
 
 ```php
 // Users who made a purchase over $100 in the last 7 days
@@ -179,7 +197,7 @@ User::whereHas('events', function ($query) {
 })->get();
 ```
 
-### Querying Models by Events
+## Querying Models by Events
 
 ```php
 // Find users who have logged in
@@ -245,7 +263,9 @@ Schedule it in your `routes/console.php` or kernel:
 Schedule::command('eventable:prune')->daily();
 ```
 
-## Extending the Event Model
+When pruning by `keep`, Eventable keeps the newest rows by `created_at desc, id desc`. If `varyOnData` is enabled, rows are partitioned by model and stored JSON payload before the keep limit is applied.
+
+## Custom Event Models
 
 You can extend the default Event model:
 
@@ -267,6 +287,19 @@ Then update the config:
 ```php
 'model' => App\Models\Event::class,
 ```
+
+Relationships, direct `Event` queries, and the prune command all resolve through the configured model class.
+
+## Docs
+
+- [Introduction](docs/index.md)
+- [Installation](docs/installation.md)
+- [Configuration](docs/configuration.md)
+- [Usage](docs/usage.md)
+- [Querying Events](docs/querying.md)
+- [Pruning Events](docs/pruning.md)
+- [API Reference](docs/api-reference.md)
+- [Troubleshooting](docs/troubleshooting.md)
 
 ## License
 

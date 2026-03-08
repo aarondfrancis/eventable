@@ -3,7 +3,13 @@
 ## Requirements
 
 - PHP 8.2 or higher
-- Laravel 11.x or 12.x
+- Laravel 11.x or 12.24+
+
+CI coverage currently runs against:
+- SQLite
+- MySQL 8
+- PostgreSQL 17
+- PostgreSQL 18
 
 ## Install via Composer
 
@@ -24,7 +30,20 @@ This will create:
 - `config/eventable.php` — Package configuration
 - A migration file for the `events` table
 
-## Run Migrations
+The published migration:
+- Uses a `string` column for `type`, so int-backed and string-backed enums work out of the box
+- Uses `morphs('eventable')`, so it follows Laravel's configured morph key type
+
+If your application uses UUIDs or ULIDs for polymorphic keys, configure that before you run the migration:
+
+```php
+use Illuminate\Support\Facades\Schema;
+
+Schema::morphUsingUuids();
+// or Schema::morphUsingUlids();
+```
+
+## Run the Migration
 
 ```bash
 php artisan migrate
@@ -73,9 +92,9 @@ Register it in `config/eventable.php`:
 ],
 ```
 
-> **Note:** Both int-backed and string-backed enums are supported. The default migration uses a `string` column for the `type` field. If you prefer an integer column for int-backed enums, customize the migration before running it.
+This registration is required before you call `addEvent()`. Eventable stores the alias in `type_class` and the enum backing value in `type`, which lets multiple enums safely reuse the same values.
 
-> **UUID/ULID models:** The published migration respects Laravel's default morph key type. If your app uses UUIDs or ULIDs for polymorphic keys, call `Schema::morphUsingUuids()` or `Schema::morphUsingUlids()` before running the migration.
+If you later customize the migration to store `type` as an integer, remember that string-backed enums will no longer fit.
 
 ## (Recommended) Enforce a Morph Map
 
@@ -90,5 +109,7 @@ Relation::enforceMorphMap([
     'order' => \App\Models\Order::class,
 ]);
 ```
+
+Eventable separately registers its own Event model in Laravel's morph map when `eventable.register_morph_map` is enabled.
 
 You're now ready to start tracking events!

@@ -12,7 +12,7 @@ The database table name for storing events.
 'table' => 'events',
 ```
 
-If you need a different table name (e.g., to avoid conflicts), change this before running migrations.
+If you need a different table name, change this before running migrations.
 
 ### model
 
@@ -22,7 +22,7 @@ The Eloquent model class used for events.
 'model' => AaronFrancis\Eventable\Models\Event::class,
 ```
 
-You can extend the default Event model to add custom functionality:
+You can extend the default Event model to add custom functionality or use a different database connection:
 
 ```php
 <?php
@@ -48,6 +48,8 @@ Then update the config:
 'model' => App\Models\Event::class,
 ```
 
+Relationships, direct `Event` queries, and the `eventable:prune` command all resolve through this configured model class.
+
 ### event_types
 
 **Required.** Register all your event enums with short aliases:
@@ -68,7 +70,23 @@ This registration serves two purposes:
 
 The alias is stored in the `type_class` column, and the enum value is stored in the `type` column. Together, they uniquely identify each event.
 
-**Important:** You must register an enum before using it with `addEvent()`. Attempting to use an unregistered enum will throw an `InvalidArgumentException`.
+Backed-enum queries such as `ofType(UserEvent::Created)` and `whereLatestEventIs(UserEvent::Created)` use both the alias and the enum value. Raw values only filter the `type` column.
+
+**Important:** You must register an enum before using it with `addEvent()`. Attempting to use an unregistered enum throws an `InvalidArgumentException`.
+
+### Manual Registry Access
+
+For tests or dynamic bootstrapping, you can also interact with the registry directly:
+
+```php
+use AaronFrancis\Eventable\EventTypeRegistry;
+
+EventTypeRegistry::register('user', App\Enums\UserEvent::class);
+EventTypeRegistry::getAlias(App\Enums\UserEvent::class); // 'user'
+EventTypeRegistry::getClass('user'); // App\Enums\UserEvent::class
+```
+
+Configuration is still the normal and preferred place to define aliases.
 
 ### register_morph_map
 
@@ -78,7 +96,7 @@ Whether to register the Event model in Laravel's morph map.
 'register_morph_map' => true,
 ```
 
-When enabled, polymorphic relationships store short type names (like `event`) instead of full class names. This keeps your database cleaner and allows you to refactor class names without breaking existing data.
+When enabled, Eventable registers the configured Event model under the alias in `morph_alias`. This affects the Event model itself, not your application's own eventable models.
 
 ### morph_alias
 
@@ -119,4 +137,4 @@ You can use environment variables for configuration values:
 'table' => env('EVENTABLE_TABLE', 'events'),
 ```
 
-However, avoid using `env()` directly in published config files for packages — Laravel's config caching won't work properly. Use config values with defaults instead.
+Avoid calling `env()` from application or package code; use `config()` instead. If you do use `env()` in your app config, remember to refresh the config cache after changes.
