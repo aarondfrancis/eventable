@@ -108,7 +108,7 @@ class PruneEventsCommand extends Command
     protected function partitionByDataExpression(string $driver): string
     {
         return match ($driver) {
-            'mysql' => 'cast(data as char)',
+            'mysql' => 'cast(data as char character set utf8mb4) collate utf8mb4_bin',
             'pgsql' => '(data::jsonb)',
             'sqlite' => 'json(data)',
             default => 'data',
