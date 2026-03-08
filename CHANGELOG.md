@@ -9,10 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - `Prune` fluent builder for pending prune policies, with chains like `Prune::before(...)->keep(...)->dontVaryOnData()`
+- Closure-based event query constraints for `hasEvent()`, `whereEventHasHappened()`, `whereEventHasntHappened()`, `whereEventHasHappenedTimes()`, and `whereEventHasHappenedAtLeast()`
 
 ### Changed
 - `PruneableEvent::prune()` may now return `PruneConfig`, `Prune`, or `null`
 - Pruning docs now prefer the fluent `Prune` builder while still supporting direct `PruneConfig` construction
+- Querying docs now show closure-based event filters using normal Laravel query methods on the matching event query
 
 ## [0.2.1] - 2026-03-08
 
