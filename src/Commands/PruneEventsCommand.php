@@ -55,13 +55,11 @@ class PruneEventsCommand extends Command
                     ->where('type_class', $typeClass)
                     ->where('type', $case->value);
 
-                if ($prune->keep) {
+                if ($prune->keep !== null) {
                     $partitionBy = ['eventable_id', 'eventable_type'];
 
                     if ($prune->varyOnData) {
-                        $partitionBy[] = $connection->getDriverName() === 'pgsql'
-                            ? '(data::jsonb)'
-                            : 'data';
+                        $partitionBy[] = $this->partitionByDataExpression($connection->getDriverName());
                     }
 
                     $partitionBy = implode(', ', $partitionBy);
@@ -74,7 +72,7 @@ class PruneEventsCommand extends Command
                         ->select('id')
                         // Partition by model (eventable_id + eventable_type) and order by created_at such
                         // that have a ranked list of events of this type that were added to this model.
-                        ->selectRaw("row_number() over (partition by $partitionBy order by created_at desc) as num");
+                        ->selectRaw("row_number() over (partition by $partitionBy order by created_at desc, id desc) as num");
 
                     $query
                         // Add in our CTE from above.
@@ -85,7 +83,7 @@ class PruneEventsCommand extends Command
                         });
                 }
 
-                if ($prune->before) {
+                if ($prune->before !== null) {
                     $query->where('created_at', '<', $prune->before->copy()->setTimezone('UTC'));
                 }
 
@@ -105,5 +103,14 @@ class PruneEventsCommand extends Command
         $this->info('Total: '.number_format($pruned)." records {$action}.");
 
         return self::SUCCESS;
+    }
+
+    protected function partitionByDataExpression(string $driver): string
+    {
+        return match ($driver) {
+            'pgsql' => '(data::jsonb)',
+            'sqlite' => 'json(data)',
+            default => 'data',
+        };
     }
 }

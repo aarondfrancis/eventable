@@ -344,12 +344,14 @@ Return `null` to skip pruning for that event case.
 ```php
 public function __construct(
     public ?Carbon $before = null,
-    public int $keep = 0,
+    public ?int $keep = null,
     public bool $varyOnData = true,
 )
 ```
 
 Properties:
 - `before`: delete rows older than this timestamp
-- `keep`: keep the newest N rows per model
-- `varyOnData`: when `keep` is used, partition by stored JSON payload as well
+- `keep`: keep the newest N rows per model; must be at least `1` when provided
+- `varyOnData`: when `keep` is used, partition by canonicalized JSON payload as well
+
+At least one of `before` or `keep` must be provided.

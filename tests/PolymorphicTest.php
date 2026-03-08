@@ -94,6 +94,32 @@ it('can query all events across model types', function () {
     expect($createdEvents)->toHaveCount(2);
 });
 
+it('whereLatestEventIs keeps latest-event checks isolated by model type', function () {
+    $testModel = TestModel::create(['name' => 'Test Model']);
+    $anotherModel = AnotherModel::create(['title' => 'Another Model']);
+
+    expect($testModel->id)->toBe(1);
+    expect($anotherModel->id)->toBe(1);
+
+    $testModel->addEvent(TestEvent::Created);
+    $testModel->addEvent(TestEvent::Updated);
+
+    $anotherModel->addEvent(TestEvent::Created);
+    $anotherModel->addEvent(TestEvent::Viewed);
+
+    $latestTestModels = TestModel::whereLatestEventIs(TestEvent::Updated)->get();
+    $latestAnotherModels = AnotherModel::whereLatestEventIs(TestEvent::Viewed)->get();
+
+    expect($latestTestModels)->toHaveCount(1);
+    expect($latestTestModels->first()->id)->toBe($testModel->id);
+
+    expect($latestAnotherModels)->toHaveCount(1);
+    expect($latestAnotherModels->first()->id)->toBe($anotherModel->id);
+
+    expect(TestModel::whereLatestEventIs(TestEvent::Viewed)->count())->toBe(0);
+    expect(AnotherModel::whereLatestEventIs(TestEvent::Updated)->count())->toBe(0);
+});
+
 it('events with data are isolated by model type', function () {
     $testModel = TestModel::create(['name' => 'Test']);
     $anotherModel = AnotherModel::create(['title' => 'Another']);

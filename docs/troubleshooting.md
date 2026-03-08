@@ -42,7 +42,7 @@ Make sure the enum is both:
 
 ### Pruning doesn't delete anything
 
-Your enum case must return a non-null `PruneConfig`:
+Your enum case must return a non-null `PruneConfig` with at least one retention rule:
 
 ```php
 enum UserEvent: int implements PruneableEvent

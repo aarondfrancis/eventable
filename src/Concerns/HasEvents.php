@@ -7,6 +7,7 @@ use AaronFrancis\Eventable\Models\Event;
 use BackedEnum;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 
 /**
  * @method MorphMany morphMany(string $related, string $name, ?string $type = null, ?string $id = null, ?string $localKey = null)
@@ -105,22 +106,8 @@ trait HasEvents
 
     public function scopeWhereLatestEventIs(Builder $query, BackedEnum $event): void
     {
-        $typeClass = EventTypeRegistry::getAlias($event);
-
-        $query->whereHas('events', function ($events) use ($event, $typeClass) {
-            $table = $events->getModel()->getTable();
-
-            $events->where('id', function ($sub) use ($table) {
-                $sub->from($table.' as e2')
-                    ->select('id')
-                    ->whereColumn('e2.eventable_id', $table.'.eventable_id')
-                    ->whereColumn('e2.eventable_type', $table.'.eventable_type')
-                    ->orderByDesc('e2.created_at')
-                    ->orderByDesc('e2.id')
-                    ->limit(1);
-            })
-                ->where('type_class', $typeClass)
-                ->where('type', $event->value);
+        $query->whereHas('latestEventRecord', function ($events) use ($event) {
+            $events->ofType($event);
         });
     }
 
@@ -143,5 +130,13 @@ trait HasEvents
         $eventModel = config('eventable.model', Event::class);
 
         return $this->morphMany($eventModel, 'eventable');
+    }
+
+    public function latestEventRecord(): MorphOne
+    {
+        $eventModel = config('eventable.model', Event::class);
+
+        return $this->morphOne($eventModel, 'eventable')
+            ->latestOfMany(['created_at', 'id']);
     }
 }

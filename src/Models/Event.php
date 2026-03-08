@@ -24,6 +24,17 @@ class Event extends Model
         return config('eventable.table', 'events');
     }
 
+    public function setDataAttribute(mixed $value): void
+    {
+        if ($value === null) {
+            $this->attributes['data'] = null;
+
+            return;
+        }
+
+        $this->attributes['data'] = $this->asJson($this->normalizeJsonValue($value));
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Scopes
@@ -173,6 +184,23 @@ class Event extends Model
             'sqlite' => $query->whereRaw("json({$column}) = json(?)", [$encoded]),
             default => $query->where('data', $encoded),
         };
+    }
+
+    protected function normalizeJsonValue(mixed $value): mixed
+    {
+        if (! is_array($value)) {
+            return $value;
+        }
+
+        foreach ($value as $key => $item) {
+            $value[$key] = $this->normalizeJsonValue($item);
+        }
+
+        if (Arr::isAssoc($value)) {
+            ksort($value);
+        }
+
+        return $value;
     }
 
     /*

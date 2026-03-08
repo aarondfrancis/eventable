@@ -263,7 +263,7 @@ Schedule it in your `routes/console.php` or kernel:
 Schedule::command('eventable:prune')->daily();
 ```
 
-When pruning by `keep`, Eventable keeps the newest rows by `created_at desc, id desc`. If `varyOnData` is enabled, rows are partitioned by model and stored JSON payload before the keep limit is applied.
+`PruneConfig` must define at least one retention rule: `before`, `keep`, or both. When pruning by `keep`, Eventable keeps the newest rows by `created_at desc, id desc`. If `varyOnData` is enabled, rows are partitioned by model and canonicalized JSON payload before the keep limit is applied.
 
 ## Custom Event Models
 

@@ -4,6 +4,7 @@ use AaronFrancis\Eventable\Models\Event;
 use AaronFrancis\Eventable\Tests\Fixtures\CustomEvent;
 use AaronFrancis\Eventable\Tests\Fixtures\PrunableCustomEvent;
 use AaronFrancis\Eventable\Tests\Fixtures\PruneableTestEvent;
+use AaronFrancis\Eventable\Tests\Fixtures\ScopedCustomEvent;
 use AaronFrancis\Eventable\Tests\Fixtures\TestEvent;
 use AaronFrancis\Eventable\Tests\Fixtures\TestModel;
 use Illuminate\Support\Carbon;
@@ -61,6 +62,25 @@ it('scopes work with custom model', function () {
     $models = TestModel::whereEventHasHappened(TestEvent::Created)->get();
 
     expect($models)->toHaveCount(1);
+});
+
+it('whereLatestEventIs respects custom event model global scopes', function () {
+    config(['eventable.model' => ScopedCustomEvent::class]);
+
+    $model = TestModel::create(['name' => 'Test']);
+
+    Carbon::setTestNow('2024-01-01 10:00:00');
+    $model->addEvent(TestEvent::Created);
+
+    Carbon::setTestNow('2024-01-01 12:00:00');
+    $model->addEvent(TestEvent::Updated);
+
+    expect($model->latestEvent()?->type)->toEqual(TestEvent::Created->value);
+
+    $models = TestModel::whereLatestEventIs(TestEvent::Created)->get();
+
+    expect($models)->toHaveCount(1);
+    expect($models->first()->id)->toBe($model->id);
 });
 
 it('prune command uses the configured event model query builder', function () {

@@ -61,7 +61,7 @@ it('keep without vary on data treats all data same', function () {
             'type' => CombinedPruneEvent::KeepLast5NoVaryOnData->value,
             'eventable_id' => $model->id,
             'eventable_type' => TestModel::class,
-            'data' => json_encode(['variant' => chr(65 + $i)]),
+            'data' => ['variant' => chr(65 + $i)],
         ]);
     }
 

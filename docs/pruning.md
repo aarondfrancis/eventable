@@ -36,7 +36,7 @@ Return `null` to skip pruning for a case.
 
 ## PruneConfig Options
 
-`PruneConfig` accepts three options.
+`PruneConfig` accepts three options. You must provide at least one retention rule with `before`, `keep`, or both.
 
 ### before
 
@@ -56,7 +56,7 @@ new PruneConfig(keep: 5)
 new PruneConfig(keep: 100)
 ```
 
-When `keep` is used, Eventable defines "newest" as `created_at desc`, then `id desc`.
+`keep` must be at least `1`. When `keep` is used, Eventable defines "newest" as `created_at desc`, then `id desc`.
 
 ### varyOnData
 
@@ -78,7 +78,7 @@ With `varyOnData: true` and `keep: 3`:
 With `varyOnData: false` and `keep: 3`:
 - Keep only the 3 newest `PageViewed` events total
 
-Internally, Eventable partitions by model and stored JSON payload before applying the keep limit.
+Internally, Eventable partitions by model and canonicalized JSON payload before applying the keep limit.
 
 ### Combining Options
 

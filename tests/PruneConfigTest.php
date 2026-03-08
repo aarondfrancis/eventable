@@ -3,29 +3,32 @@
 use AaronFrancis\Eventable\PruneConfig;
 use Illuminate\Support\Carbon;
 
-it('has default values', function () {
-    $config = new PruneConfig;
+it('requires at least one retention constraint', function () {
+    new PruneConfig;
+})->throws(InvalidArgumentException::class, 'PruneConfig must define before and/or keep.');
 
-    expect($config->before)->toBeNull();
-    expect($config->keep)->toBe(0);
-    expect($config->varyOnData)->toBeTrue();
-});
+it('rejects non-positive keep values', function () {
+    new PruneConfig(keep: 0);
+})->throws(InvalidArgumentException::class, 'PruneConfig keep must be at least 1.');
 
 it('accepts custom before', function () {
     $before = Carbon::now()->subDays(30);
     $config = new PruneConfig(before: $before);
 
     expect($config->before)->toBe($before);
+    expect($config->keep)->toBeNull();
+    expect($config->varyOnData)->toBeTrue();
 });
 
 it('accepts custom keep', function () {
     $config = new PruneConfig(keep: 5);
 
     expect($config->keep)->toBe(5);
+    expect($config->before)->toBeNull();
 });
 
 it('accepts custom vary on data', function () {
-    $config = new PruneConfig(varyOnData: false);
+    $config = new PruneConfig(keep: 5, varyOnData: false);
 
     expect($config->varyOnData)->toBeFalse();
 });

@@ -20,7 +20,7 @@ it('can add event with data', function () {
 
     $event = $model->addEvent(TestEvent::Updated, ['field' => 'name', 'old' => 'Old', 'new' => 'New']);
 
-    expect($event->data)->toBe(['field' => 'name', 'old' => 'Old', 'new' => 'New']);
+    expect($event->data)->toEqual(['field' => 'name', 'old' => 'Old', 'new' => 'New']);
 });
 
 it('can add event with null data', function () {
