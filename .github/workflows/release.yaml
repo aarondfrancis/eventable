@@ -1,11 +1,11 @@
 name: Release
-run-name: Release v${{ inputs.version }}
+run-name: Release ${{ inputs.version }}
 
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release (e.g., 1.2.0)'
+        description: 'Version to release (e.g., 1.2.0 or v1.2.0)'
         required: true
         type: string
 
@@ -29,11 +29,20 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Normalize version input
+        id: version
+        run: |
+          RAW_VERSION="${{ inputs.version }}"
+          VERSION="${RAW_VERSION#v}"
+          VERSION="${VERSION#V}"
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
       - name: Validate version format
         run: |
-          VERSION="${{ inputs.version }}"
+          VERSION="${{ steps.version.outputs.version }}"
           if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Error: Invalid version format '$VERSION'. Expected X.Y.Z"
+            echo "Error: Invalid version format '${{ inputs.version }}'. Expected X.Y.Z or vX.Y.Z"
             exit 1
           fi
 
@@ -49,18 +58,18 @@ jobs:
 
       - name: Update changelog
         run: |
-          VERSION="${{ inputs.version }}"
+          VERSION="${{ steps.version.outputs.version }}"
           .github/scripts/parse-changelog.sh release "$VERSION"
 
       - name: Commit and push changelog
         run: |
-          VERSION="${{ inputs.version }}"
+          VERSION="${{ steps.version.outputs.version }}"
           git add CHANGELOG.md
           git commit -m "Update changelog for v$VERSION"
           git push
 
       - name: Create and push tag
         run: |
-          VERSION="${{ inputs.version }}"
+          VERSION="${{ steps.version.outputs.version }}"
           git tag "v$VERSION"
           git push origin "v$VERSION"

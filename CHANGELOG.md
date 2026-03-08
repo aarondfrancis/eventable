@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-03-08
+
 ### Fixed
 - `whereLatestEventIs()` now uses the same `created_at desc, id desc` ordering as `latestEvent()`
 - `whereLatestEventIs()` now resolves through the configured Event model so custom global scopes are respected
@@ -15,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - `PruneConfig` now requires at least one retention rule and rejects `keep` values below `1`
+
 
 ## [0.2.0] - 2025-12-29
 
@@ -41,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Date convenience scopes: `happenedBetween()`, `happenedToday()`, `happenedThisWeek()`, `happenedThisMonth()`
 
 
-[Unreleased]: https://github.com/aarondfrancis/eventable/compare/HEAD
+[Unreleased]: https://github.com/aarondfrancis/eventable/compare/v0.2.1...HEAD
 [0.1.0]: https://github.com/aarondfrancis/eventable/releases/tag/v0.1.0
 [0.2.0]: https://github.com/aarondfrancis/eventable/releases/tag/v0.2.0
+[0.2.1]: https://github.com/aarondfrancis/eventable/releases/tag/v0.2.1
