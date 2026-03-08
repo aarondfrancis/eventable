@@ -6,6 +6,7 @@ use AaronFrancis\Eventable\Contracts\PruneableEvent;
 use AaronFrancis\Eventable\EventTypeRegistry;
 use AaronFrancis\Eventable\Models\Event;
 use AaronFrancis\Eventable\PruneableEventDiscovery;
+use AaronFrancis\Eventable\PruneConfig;
 use Illuminate\Console\Command;
 
 class PruneEventsCommand extends Command
@@ -50,6 +51,8 @@ class PruneEventsCommand extends Command
                 if (is_null($prune)) {
                     continue;
                 }
+
+                $prune = PruneConfig::from($prune);
 
                 $query = $eventModelInstance->newQuery()
                     ->where('type_class', $typeClass)

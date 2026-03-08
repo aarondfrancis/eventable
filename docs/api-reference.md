@@ -334,10 +334,25 @@ Check whether an alias exists.
 Implement on an enum to opt into pruning:
 
 ```php
-public function prune(): ?PruneConfig;
+public function prune(): PruneConfig|Prune|null;
 ```
 
 Return `null` to skip pruning for that event case.
+
+### Prune
+
+Fluent builder for `PruneConfig`:
+
+```php
+Prune::before(now()->subDays(30))->keep(5)->dontVaryOnData()
+```
+
+Methods:
+- `before(DateTimeInterface $before)`: set an age cutoff
+- `keep(int $keep)`: keep the newest N rows per model
+- `varyOnData(bool $varyOnData = true)`: toggle payload partitioning
+- `dontVaryOnData()`: convenience alias for `varyOnData(false)`
+- `toPruneConfig()`: resolve the builder into a concrete `PruneConfig`
 
 ### PruneConfig
 
@@ -355,3 +370,7 @@ Properties:
 - `varyOnData`: when `keep` is used, partition by canonicalized JSON payload as well
 
 At least one of `before` or `keep` must be provided.
+
+```php
+public static function from(PruneConfig|Prune $prune): PruneConfig;
+```

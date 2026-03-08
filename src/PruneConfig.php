@@ -6,6 +6,15 @@ use Illuminate\Support\Carbon;
 
 readonly class PruneConfig
 {
+    public static function from(self|Prune $prune): self
+    {
+        if ($prune instanceof self) {
+            return $prune;
+        }
+
+        return $prune->toPruneConfig();
+    }
+
     public function __construct(
         public ?Carbon $before = null,
         public ?int $keep = null,

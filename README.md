@@ -223,6 +223,7 @@ Implement `PruneableEvent` on your registered enums to configure retention polic
 
 ```php
 use AaronFrancis\Eventable\Contracts\PruneableEvent;
+use AaronFrancis\Eventable\Prune;
 use AaronFrancis\Eventable\PruneConfig;
 
 enum UserEvent: int implements PruneableEvent
@@ -232,20 +233,22 @@ enum UserEvent: int implements PruneableEvent
     // ... other cases ...
     case PageViewed = 6;
 
-    public function prune(): ?PruneConfig
+    public function prune(): PruneConfig|Prune|null
     {
         return match ($this) {
             // Keep only the last 5 login events per user
-            self::LoggedIn => new PruneConfig(keep: 5),
+            self::LoggedIn => Prune::keep(5),
 
             // Delete page views older than 30 days
-            self::PageViewed => new PruneConfig(before: now()->subDays(30)),
+            self::PageViewed => Prune::before(now()->subDays(30)),
 
             default => null, // Don't prune
         };
     }
 }
 ```
+
+If you prefer, you can still return `new PruneConfig(...)` directly.
 
 Run the prune command:
 
@@ -263,7 +266,7 @@ Schedule it in your `routes/console.php` or kernel:
 Schedule::command('eventable:prune')->daily();
 ```
 
-`PruneConfig` must define at least one retention rule: `before`, `keep`, or both. When pruning by `keep`, Eventable keeps the newest rows by `created_at desc, id desc`. If `varyOnData` is enabled, rows are partitioned by model and canonicalized JSON payload before the keep limit is applied, so equivalent JSON objects are grouped together across supported drivers.
+`PruneConfig` must define at least one retention rule: `before`, `keep`, or both. `Prune` is a fluent builder for producing that config. When pruning by `keep`, Eventable keeps the newest rows by `created_at desc, id desc`. If `varyOnData` is enabled, rows are partitioned by model and canonicalized JSON payload before the keep limit is applied, so equivalent JSON objects are grouped together across supported drivers.
 
 ## Custom Event Models
 

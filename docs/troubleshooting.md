@@ -42,22 +42,28 @@ Make sure the enum is both:
 
 ### Pruning doesn't delete anything
 
-Your enum case must return a non-null `PruneConfig` with at least one retention rule:
+Your enum case must return a non-null prune policy with at least one retention rule:
 
 ```php
+use AaronFrancis\Eventable\Contracts\PruneableEvent;
+use AaronFrancis\Eventable\Prune;
+use AaronFrancis\Eventable\PruneConfig;
+
 enum UserEvent: int implements PruneableEvent
 {
     case LoggedIn = 1;
 
-    public function prune(): ?PruneConfig
+    public function prune(): PruneConfig|Prune|null
     {
         return match ($this) {
-            self::LoggedIn => new PruneConfig(keep: 5),
+            self::LoggedIn => Prune::keep(5),
             default => null,
         };
     }
 }
 ```
+
+Returning `new PruneConfig(...)` directly is still supported.
 
 ## Query Issues
 
@@ -190,15 +196,15 @@ $users = User::with(['events' => function ($query) {
 Use pruning to limit table growth:
 
 ```php
-public function prune(): ?PruneConfig
+use AaronFrancis\Eventable\Prune;
+use AaronFrancis\Eventable\PruneConfig;
+
+public function prune(): PruneConfig|Prune|null
 {
     return match ($this) {
-        self::PageViewed => new PruneConfig(keep: 10),
-        self::LoggedIn => new PruneConfig(before: now()->subMonths(3)),
-        self::ApiCalled => new PruneConfig(
-            before: now()->subDays(30),
-            keep: 100,
-        ),
+        self::PageViewed => Prune::keep(10),
+        self::LoggedIn => Prune::before(now()->subMonths(3)),
+        self::ApiCalled => Prune::before(now()->subDays(30))->keep(100),
         default => null,
     };
 }

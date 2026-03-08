@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `Prune` fluent builder for pending prune policies, with chains like `Prune::before(...)->keep(...)->dontVaryOnData()`
+
+### Changed
+- `PruneableEvent::prune()` may now return `PruneConfig`, `Prune`, or `null`
+- Pruning docs now prefer the fluent `Prune` builder while still supporting direct `PruneConfig` construction
+
 ## [0.2.1] - 2026-03-08
 
 ### Fixed

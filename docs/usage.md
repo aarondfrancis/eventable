@@ -257,6 +257,10 @@ $product->addEvent(ActivityType::Archived);
 ### User Activity Tracking
 
 ```php
+use AaronFrancis\Eventable\Contracts\PruneableEvent;
+use AaronFrancis\Eventable\Prune;
+use AaronFrancis\Eventable\PruneConfig;
+
 enum UserActivity: int implements PruneableEvent
 {
     case LoggedIn = 1;
@@ -264,11 +268,11 @@ enum UserActivity: int implements PruneableEvent
     case PasswordChanged = 3;
     case ProfileUpdated = 4;
 
-    public function prune(): ?PruneConfig
+    public function prune(): PruneConfig|Prune|null
     {
         return match ($this) {
-            self::LoggedIn => new PruneConfig(keep: 10),
-            self::LoggedOut => new PruneConfig(keep: 5),
+            self::LoggedIn => Prune::keep(10),
+            self::LoggedOut => Prune::keep(5),
             default => null,
         };
     }

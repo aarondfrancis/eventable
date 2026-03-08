@@ -12,6 +12,7 @@ Implement `PruneableEvent` on a registered event enum:
 namespace App\Enums;
 
 use AaronFrancis\Eventable\Contracts\PruneableEvent;
+use AaronFrancis\Eventable\Prune;
 use AaronFrancis\Eventable\PruneConfig;
 
 enum UserEvent: int implements PruneableEvent
@@ -21,11 +22,11 @@ enum UserEvent: int implements PruneableEvent
     case OrderPlaced = 3;
     case PageViewed = 4;
 
-    public function prune(): ?PruneConfig
+    public function prune(): PruneConfig|Prune|null
     {
         return match ($this) {
-            self::LoggedIn => new PruneConfig(keep: 5),
-            self::PageViewed => new PruneConfig(before: now()->subDays(30)),
+            self::LoggedIn => Prune::keep(5),
+            self::PageViewed => Prune::before(now()->subDays(30)),
             self::PasswordChanged, self::OrderPlaced => null,
         };
     }
@@ -33,6 +34,8 @@ enum UserEvent: int implements PruneableEvent
 ```
 
 Return `null` to skip pruning for a case.
+
+`Prune` is a fluent builder for `PruneConfig`, so you can also write chains like `Prune::before(now()->subDays(90))->keep(10)->dontVaryOnData()`. Returning `new PruneConfig(...)` directly is still supported.
 
 ## PruneConfig Options
 
@@ -43,8 +46,8 @@ Return `null` to skip pruning for a case.
 Delete events older than a given date:
 
 ```php
-new PruneConfig(before: now()->subDays(30))
-new PruneConfig(before: now()->subYear())
+Prune::before(now()->subDays(30))
+Prune::before(now()->subYear())
 ```
 
 ### keep
@@ -52,8 +55,8 @@ new PruneConfig(before: now()->subYear())
 Keep the newest N events per model:
 
 ```php
-new PruneConfig(keep: 5)
-new PruneConfig(keep: 100)
+Prune::keep(5)
+Prune::keep(100)
 ```
 
 `keep` must be at least `1`. When `keep` is used, Eventable defines "newest" as `created_at desc`, then `id desc`.
@@ -63,8 +66,8 @@ new PruneConfig(keep: 100)
 When `keep` is used, `varyOnData` controls whether different payloads are counted separately. It defaults to `true`.
 
 ```php
-new PruneConfig(keep: 3, varyOnData: true)
-new PruneConfig(keep: 3, varyOnData: false)
+Prune::keep(3)->varyOnData()
+Prune::keep(3)->dontVaryOnData()
 ```
 
 Example:
@@ -89,10 +92,7 @@ That means:
 You can combine age-based and count-based retention:
 
 ```php
-new PruneConfig(
-    before: now()->subDays(90),
-    keep: 10,
-)
+Prune::before(now()->subDays(90))->keep(10)
 ```
 
 ## Running the Prune Command
@@ -154,23 +154,20 @@ self::PasswordChanged => null,
 ### Time-Based Retention
 
 ```php
-self::PageViewed => new PruneConfig(before: now()->subDays(7)),
-self::LoggedIn => new PruneConfig(before: now()->subDays(90)),
-self::OrderShipped => new PruneConfig(before: now()->subYear()),
+self::PageViewed => Prune::before(now()->subDays(7)),
+self::LoggedIn => Prune::before(now()->subDays(90)),
+self::OrderShipped => Prune::before(now()->subYear()),
 ```
 
 ### Count-Based Retention
 
 ```php
-self::LoggedIn => new PruneConfig(keep: 10),
-self::PageViewed => new PruneConfig(keep: 50),
+self::LoggedIn => Prune::keep(10),
+self::PageViewed => Prune::keep(50),
 ```
 
 ### Hybrid Retention
 
 ```php
-self::LoggedIn => new PruneConfig(
-    before: now()->subDays(30),
-    keep: 20,
-),
+self::LoggedIn => Prune::before(now()->subDays(30))->keep(20),
 ```
