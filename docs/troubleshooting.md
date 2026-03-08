@@ -135,6 +135,7 @@ Event::happenedThisWeek('Europe/Paris')->get();
 - highest `id` as the tie-breaker
 
 If you backfill historical events, make sure `created_at` reflects the event time you want to query against.
+Those queries also resolve through your configured Event model, so custom global scopes still affect what counts as the latest visible event.
 
 ## String Enums and Morph Keys
 
@@ -208,6 +209,8 @@ Schedule pruning to run regularly:
 ```php
 Schedule::command('eventable:prune')->daily();
 ```
+
+If you use `varyOnData`, Eventable groups canonicalized JSON objects together across supported drivers. Object key ordering does not matter, but array ordering still does.
 
 ## Custom Event Model Issues
 

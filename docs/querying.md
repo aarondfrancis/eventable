@@ -15,7 +15,7 @@ $user->eventCount();
 $user->eventCount(UserEvent::PageViewed);
 ```
 
-`latestEvent()` and `whereLatestEventIs()` use the same ordering: newest `created_at`, then highest `id`.
+`latestEvent()` and `whereLatestEventIs()` use the same ordering: newest `created_at`, then highest `id`. They also resolve through the configured Event model, so custom global scopes and soft-delete constraints still apply.
 
 ## Querying a Model's Events
 
@@ -172,7 +172,7 @@ User::whereLatestEventIs(UserEvent::Subscribed)->get();
 User::whereLatestEventIs(UserEvent::Churned)->get();
 ```
 
-That latest-event check uses the same `created_at desc, id desc` ordering as `latestEvent()`.
+That latest-event check uses the same `created_at desc, id desc` ordering as `latestEvent()`, and it honors the configured Event model's scopes.
 
 ### Combine With Normal Eloquent Conditions
 

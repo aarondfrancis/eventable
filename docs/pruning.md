@@ -80,6 +80,10 @@ With `varyOnData: false` and `keep: 3`:
 
 Internally, Eventable partitions by model and canonicalized JSON payload before applying the keep limit.
 
+That means:
+- equivalent JSON objects with different key ordering are treated as the same payload
+- JSON arrays keep their original order, so reordered lists are treated as different payloads
+
 ### Combining Options
 
 You can combine age-based and count-based retention:

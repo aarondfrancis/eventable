@@ -142,7 +142,7 @@ $user->eventCount(); // all events
 $user->eventCount(UserEvent::LoggedIn); // by type
 ```
 
-`latestEvent()` and `whereLatestEventIs()` use the same definition of "latest": newest `created_at`, with `id` as the tie-breaker.
+`latestEvent()` and `whereLatestEventIs()` use the same definition of "latest": newest `created_at`, with `id` as the tie-breaker. Those latest-event queries also resolve through your configured Event model, so custom global scopes stay in effect.
 
 ## Querying a Model's Events
 
@@ -263,7 +263,7 @@ Schedule it in your `routes/console.php` or kernel:
 Schedule::command('eventable:prune')->daily();
 ```
 
-`PruneConfig` must define at least one retention rule: `before`, `keep`, or both. When pruning by `keep`, Eventable keeps the newest rows by `created_at desc, id desc`. If `varyOnData` is enabled, rows are partitioned by model and canonicalized JSON payload before the keep limit is applied.
+`PruneConfig` must define at least one retention rule: `before`, `keep`, or both. When pruning by `keep`, Eventable keeps the newest rows by `created_at desc, id desc`. If `varyOnData` is enabled, rows are partitioned by model and canonicalized JSON payload before the keep limit is applied, so equivalent JSON objects are grouped together across supported drivers.
 
 ## Custom Event Models
 

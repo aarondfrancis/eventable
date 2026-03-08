@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- `whereLatestEventIs()` now uses the same `created_at desc, id desc` ordering as `latestEvent()`
+- `whereLatestEventIs()` now resolves through the configured Event model so custom global scopes are respected
+- `eventable:prune` now uses deterministic `created_at` and `id` ordering when applying `keep`
+- `varyOnData` pruning now groups canonicalized JSON payloads consistently across SQLite, PostgreSQL, and MySQL
+
+### Changed
+- `PruneConfig` now requires at least one retention rule and rejects `keep` values below `1`
+
 ## [0.2.0] - 2025-12-29
 
 ### Changed
