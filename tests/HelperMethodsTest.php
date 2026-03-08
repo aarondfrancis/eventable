@@ -37,6 +37,15 @@ it('hasEvent with data matching', function () {
     expect($model->hasEvent(TestEvent::Updated, ['field' => 'phone']))->toBeFalse();
 });
 
+it('hasEvent with closure constraints', function () {
+    $model = TestModel::create(['name' => 'Test']);
+    $model->addEvent(TestEvent::Updated, ['field' => 'name']);
+    $model->addEvent(TestEvent::Updated, ['field' => 'email']);
+
+    expect($model->hasEvent(TestEvent::Updated, fn ($events) => $events->where('data->field', '!=', 'email')))->toBeTrue();
+    expect($model->hasEvent(TestEvent::Updated, fn ($events) => $events->where('data->field', '!=', 'name')->where('data->field', '!=', 'email')))->toBeFalse();
+});
+
 it('hasEvent is scoped to model', function () {
     $model1 = TestModel::create(['name' => 'Model 1']);
     $model2 = TestModel::create(['name' => 'Model 2']);

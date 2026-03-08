@@ -146,7 +146,7 @@ User::whereEventHasntHappened(UserEvent::EmailVerified)->get();
 
 ### Match Event Data
 
-Model scopes accept array fragments for data matching:
+Model scopes accept either array fragments or a closure for additional Laravel query constraints:
 
 ```php
 User::whereEventHasHappened(UserEvent::OrderPlaced, [
@@ -156,7 +156,13 @@ User::whereEventHasHappened(UserEvent::OrderPlaced, [
 User::whereEventHasntHappened(UserEvent::OrderPlaced, [
     'coupon_code' => 'SUMMER20',
 ])->get();
+
+User::whereEventHasHappened(UserEvent::OrderPlaced, function ($events) {
+    $events->where('data->total', '>', 99);
+})->get();
 ```
+
+When you pass a closure, `ofType($event)` has already been applied to the event query. Use the closure only for extra constraints.
 
 ### Event Counts
 

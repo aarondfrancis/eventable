@@ -38,16 +38,16 @@ Get the model's `MorphMany` relationship to the configured Event model.
 #### hasEvent()
 
 ```php
-public function hasEvent(BackedEnum $event, array $data = []): bool
+public function hasEvent(BackedEnum $event, Closure|array $data = []): bool
 ```
 
 Check whether the model has a matching event.
 
 Parameters:
 - `$event`: the enum case to look for
-- `$data`: optional JSON fragment to match
+- `$data`: optional JSON fragment to match, or a closure that adds more event-query constraints
 
-Note: `hasEvent()` accepts array fragments. For scalar payload matching, use `$model->events()->whereData(...)`.
+Note: when you pass a closure, it receives the event query after `ofType($event)` has already been applied. For scalar payload matching, use `$model->events()->whereData(...)`.
 
 #### latestEvent()
 
@@ -86,7 +86,7 @@ Count all events or just events of a specific type.
 #### scopeWhereEventHasHappened()
 
 ```php
-public function scopeWhereEventHasHappened(Builder $query, BackedEnum $event, array $data = []): void
+public function scopeWhereEventHasHappened(Builder $query, BackedEnum $event, Closure|array $data = []): void
 ```
 
 Filter models that have at least one matching event.
@@ -94,7 +94,7 @@ Filter models that have at least one matching event.
 #### scopeWhereEventHasntHappened()
 
 ```php
-public function scopeWhereEventHasntHappened(Builder $query, BackedEnum $event, array $data = []): void
+public function scopeWhereEventHasntHappened(Builder $query, BackedEnum $event, Closure|array $data = []): void
 ```
 
 Filter models that do not have a matching event.
@@ -102,7 +102,7 @@ Filter models that do not have a matching event.
 #### scopeWhereEventHasHappenedTimes()
 
 ```php
-public function scopeWhereEventHasHappenedTimes(Builder $query, BackedEnum $event, int $count, array $data = []): void
+public function scopeWhereEventHasHappenedTimes(Builder $query, BackedEnum $event, int $count, Closure|array $data = []): void
 ```
 
 Filter models with exactly `$count` matching events.
@@ -110,7 +110,7 @@ Filter models with exactly `$count` matching events.
 #### scopeWhereEventHasHappenedAtLeast()
 
 ```php
-public function scopeWhereEventHasHappenedAtLeast(Builder $query, BackedEnum $event, int $count, array $data = []): void
+public function scopeWhereEventHasHappenedAtLeast(Builder $query, BackedEnum $event, int $count, Closure|array $data = []): void
 ```
 
 Filter models with at least `$count` matching events.

@@ -5,6 +5,7 @@ namespace AaronFrancis\Eventable\Concerns;
 use AaronFrancis\Eventable\EventTypeRegistry;
 use AaronFrancis\Eventable\Models\Event;
 use BackedEnum;
+use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
@@ -28,12 +29,13 @@ trait HasEvents
     | Helper Methods
     |--------------------------------------------------------------------------
     */
-    public function hasEvent(BackedEnum $event, array $data = []): bool
+    public function hasEvent(BackedEnum $event, Closure|array $data = []): bool
     {
-        return $this->events()
-            ->ofType($event)
-            ->whereData($data)
-            ->exists();
+        $query = $this->events()->ofType($event);
+
+        $this->applyEventDataConstraint($query, $data);
+
+        return $query->exists();
     }
 
     public function latestEvent(?BackedEnum $type = null): ?Event
@@ -80,27 +82,31 @@ trait HasEvents
     | Scopes
     |--------------------------------------------------------------------------
     */
-    public function scopeWhereEventHasHappened(Builder $query, BackedEnum $event, array $data = []): void
+    public function scopeWhereEventHasHappened(Builder $query, BackedEnum $event, Closure|array $data = []): void
     {
         $this->queryEventExistence($query, $event, $data, hasHappened: true);
     }
 
-    public function scopeWhereEventHasntHappened(Builder $query, BackedEnum $event, array $data = []): void
+    public function scopeWhereEventHasntHappened(Builder $query, BackedEnum $event, Closure|array $data = []): void
     {
         $this->queryEventExistence($query, $event, $data, hasHappened: false);
     }
 
-    public function scopeWhereEventHasHappenedTimes(Builder $query, BackedEnum $event, int $count, array $data = []): void
+    public function scopeWhereEventHasHappenedTimes(Builder $query, BackedEnum $event, int $count, Closure|array $data = []): void
     {
         $query->whereHas('events', function ($events) use ($event, $data) {
-            $events->ofType($event)->whereData($data);
+            $events->ofType($event);
+
+            $this->applyEventDataConstraint($events, $data);
         }, '=', $count);
     }
 
-    public function scopeWhereEventHasHappenedAtLeast(Builder $query, BackedEnum $event, int $count, array $data = []): void
+    public function scopeWhereEventHasHappenedAtLeast(Builder $query, BackedEnum $event, int $count, Closure|array $data = []): void
     {
         $query->whereHas('events', function ($events) use ($event, $data) {
-            $events->ofType($event)->whereData($data);
+            $events->ofType($event);
+
+            $this->applyEventDataConstraint($events, $data);
         }, '>=', $count);
     }
 
@@ -111,13 +117,26 @@ trait HasEvents
         });
     }
 
-    protected function queryEventExistence(Builder $query, BackedEnum $event, array $data, bool $hasHappened = true): void
+    protected function queryEventExistence(Builder $query, BackedEnum $event, Closure|array $data, bool $hasHappened = true): void
     {
         $method = $hasHappened ? 'whereHas' : 'whereDoesntHave';
 
         $query->$method('events', function ($events) use ($event, $data) {
-            return $events->ofType($event)->whereData($data);
+            $events->ofType($event);
+
+            $this->applyEventDataConstraint($events, $data);
         });
+    }
+
+    protected function applyEventDataConstraint(Builder|MorphMany $query, Closure|array $data): void
+    {
+        if ($data instanceof Closure) {
+            $data($query);
+
+            return;
+        }
+
+        $query->whereData($data);
     }
 
     /*

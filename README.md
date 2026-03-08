@@ -150,10 +150,10 @@ $user->eventCount(UserEvent::LoggedIn); // by type
 // Get all events for a model
 $user->events;
 
-// Filter by type
+// Filter by the enum alias and backing value
 $user->events()->ofType(UserEvent::LoggedIn)->get();
 
-// Filter by raw values when you also know the alias
+// Filter by raw backing values when you also provide the enum alias
 $user->events()->ofTypeClass('user')->ofType([1, 5])->get();
 
 // Filter by data
@@ -208,6 +208,11 @@ User::whereEventHasntHappened(UserEvent::EmailVerified)->get();
 
 // With specific data
 User::whereEventHasHappened(UserEvent::Purchase, ['total' => 99.99])->get();
+
+// With advanced Laravel query constraints on the matching events
+User::whereEventHasHappened(UserEvent::Purchase, function ($events) {
+    $events->where('data->total', '>', 99);
+})->get();
 
 // Count-based queries
 User::whereEventHasHappenedTimes(UserEvent::LoggedIn, 3)->get(); // exactly 3 times

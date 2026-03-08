@@ -93,6 +93,22 @@ it('filters whereEventHasHappened with data', function () {
     expect($nameUpdated->first()->id)->toBe($model1->id);
 });
 
+it('filters whereEventHasHappened with closure constraints', function () {
+    $model1 = TestModel::create(['name' => 'Model 1']);
+    $model2 = TestModel::create(['name' => 'Model 2']);
+
+    $model1->addEvent(TestEvent::Updated, ['field' => 'name']);
+    $model2->addEvent(TestEvent::Updated, ['field' => 'email']);
+
+    $models = TestModel::whereEventHasHappened(
+        TestEvent::Updated,
+        fn ($events) => $events->where('data->field', '!=', 'email')
+    )->get();
+
+    expect($models)->toHaveCount(1);
+    expect($models->first()->id)->toBe($model1->id);
+});
+
 it('filters whereEventHasntHappened with data', function () {
     $model1 = TestModel::create(['name' => 'Model 1']);
     $model2 = TestModel::create(['name' => 'Model 2']);
@@ -105,4 +121,23 @@ it('filters whereEventHasntHappened with data', function () {
 
     expect($notNameUpdated)->toHaveCount(2);
     expect($notNameUpdated->contains('id', $model1->id))->toBeFalse();
+});
+
+it('filters whereEventHasntHappened with closure constraints', function () {
+    $model1 = TestModel::create(['name' => 'Model 1']);
+    $model2 = TestModel::create(['name' => 'Model 2']);
+    $model3 = TestModel::create(['name' => 'Model 3']);
+
+    $model1->addEvent(TestEvent::Updated, ['field' => 'name']);
+    $model2->addEvent(TestEvent::Updated, ['field' => 'email']);
+
+    $models = TestModel::whereEventHasntHappened(
+        TestEvent::Updated,
+        fn ($events) => $events->where('data->field', '!=', 'email')
+    )->get();
+
+    expect($models)->toHaveCount(2);
+    expect($models->contains('id', $model1->id))->toBeFalse();
+    expect($models->contains('id', $model2->id))->toBeTrue();
+    expect($models->contains('id', $model3->id))->toBeTrue();
 });

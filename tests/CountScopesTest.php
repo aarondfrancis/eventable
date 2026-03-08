@@ -146,6 +146,26 @@ it('whereEventHasHappenedAtLeast with data', function () {
     expect($modelsWithAtLeast2UsdOrders->first()->id)->toBe($model1->id);
 });
 
+it('whereEventHasHappenedAtLeast with closure constraints', function () {
+    $model1 = TestModel::create(['name' => 'Model 1']);
+    $model2 = TestModel::create(['name' => 'Model 2']);
+
+    $model1->addEvent(TestEvent::Updated, ['currency' => 'USD']);
+    $model1->addEvent(TestEvent::Updated, ['currency' => 'USD']);
+    $model1->addEvent(TestEvent::Updated, ['currency' => 'EUR']);
+
+    $model2->addEvent(TestEvent::Updated, ['currency' => 'USD']);
+
+    $models = TestModel::whereEventHasHappenedAtLeast(
+        TestEvent::Updated,
+        2,
+        fn ($events) => $events->where('data->currency', '!=', 'EUR')
+    )->get();
+
+    expect($models)->toHaveCount(1);
+    expect($models->first()->id)->toBe($model1->id);
+});
+
 /*
 |--------------------------------------------------------------------------
 | whereLatestEventIs() Tests
